@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?rfc toc="yes" ?>
+<?rfc symrefs="yes" ?>
+<?rfc sortrefs="yes" ?>
+<?rfc strict="no" ?>
+<?rfc rfcedstyle="yes" ?>
+<?rfc subcompact="no" ?>
+<rfc ipr="trust200902" category="info" docName="draft-handte-httpbis-zstd-pcme-latest">
+  <front>
+    <title abbrev="Zstd PCME">
+      A Zstandard Per-Message Compression Extension for WebSocket
+    </title>
+    <author initials="W. F. P." surname="Handte" fullname="W. Felix P. Handte">
+      <organization>Facebook, Inc.</organization>
+      <address>
+        <postal>
+          <street>770 Broadway</street>
+          <city>New York</city>
+          <region>NY</region>
+          <code>10003</code>
+          <country>US</country>
+        </postal>
+        <email>felixh@fb.com</email>
+      </address>
+    </author>
+    <author initials="F" surname="Gasper" fullname="Felipe Gasper">
+      <organization>[TODO]</organization>
+      <address>
+        <postal>
+          <street>[TODO]</street>
+          <city>[TODO]</city>
+          <region>[TODO]</region>
+          <code>[TODO]</code>
+          <country>[TODO]</country>
+        </postal>
+        <email>felipe@felipegasper.com</email>
+      </address>
+    </author>
+    <date/>
+    <area>ART</area>
+    <workgroup>Individual submission</workgroup>
+    <keyword>Compression</keyword>
+    <keyword>WebSocket</keyword>
+    <abstract>
+      <t>
+        [TODO]
+      </t>
+    </abstract>
+    <note title="Draft Development">
+      <t>
+        [RFC Editor: Please remove this section before publication.]
+      </t>
+      <t>
+        The source code and issues list for this draft can be found at https://github.com/felixhandte/draft-handte-httpbis-zstd-pcme.
+      </t>
+      <t>
+        Discussion of this draft takes place on the HTTP working group mailing list (ietf-http-wg@w3.org), which is archived at https://lists.w3.org/Archives/Public/ietf-http-wg/.
+      </t>
+    </note>
+  </front>
+
+  <middle>
+    <section anchor="intro" title="Introduction">
+      <t>
+        [TODO]
+      </t>
+    </section>
+
+    <section anchor="iana" title="IANA Considerations">
+      <t>This document includes no actions for IANA.</t>
+      <t>[RFC Editor: Please remove this section before publication.]</t>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <t>
+        [TODO]
+      </t>
+    </section>
+  </middle>
+
+  <back>
+    <references title="Normative References">
+      <reference anchor="ZSTD" target="https://www.rfc-editor.org/info/rfc8478">
+        <front>
+          <title>Zstandard Compression and the application/zstd Media Type</title>
+          <author initials="Y." surname="Collet" fullname="Y. Collet">
+            <organization>Facebook, Inc.</organization>
+          </author>
+          <author initials="M." surname="Kucherawy" fullname="M. Kucherawy" role="editor">
+            <organization>Facebook, Inc.</organization>
+          </author>
+          <date year="2018" month="October"/>
+          <abstract>
+            <t>
+              Zstandard, or "zstd" (pronounced "zee standard"), is a data compression mechanism. This document describes the mechanism and registers a media type and content encoding to be used when transporting zstd-compressed content via Multipurpose Internet Mail Extensions (MIME).
+            </t>
+            <t>
+              Despite use of the word "standard" as part of its name, readers are advised that this document is not an Internet Standards Track specification; it is being published for informational purposes only.
+            </t>
+          </abstract>
+        </front>
+        <seriesInfo name="RFC" value="8478"/>
+        <seriesInfo name="DOI" value="10.17487/RFC8478"/>
+      </reference>
+    </references>
+
+    <references title="Informative References">
+      <reference anchor="BREACH" target="https://breachattack.com/">
+        <front>
+          <title>BREACH: SSL, Gone in 30 Seconds</title>
+          <author initials="A." surname="Prado" fullname="Angelo Prado"></author>
+          <author initials="N." surname="Harris" fullname="Neal Harris"></author>
+          <author initials="Y." surname="Gluck" fullname="Yoel Gluck"></author>
+          <date year="2013"/>
+        </front>
+      </reference>
+    </references>
+  </back>
+</rfc>
