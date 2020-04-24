@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE rfc SYSTEM "rfc2629-xhtml.ent">
 <?rfc toc="yes" ?>
 <?rfc symrefs="yes" ?>
@@ -6,12 +6,25 @@
 <?rfc strict="no" ?>
 <?rfc rfcedstyle="yes" ?>
 <?rfc subcompact="no" ?>
-<rfc xmlns:xi="http://www.w3.org/2001/XInclude" ipr="trust200902" category="info" docName="draft-handte-hybi-zstd-pcme-latest" obsoletes="" updates="" submissionType="IETF" xml:lang="en" tocInclude="true" symRefs="true" sortRefs="true" version="3">
+<rfc
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    ipr="trust200902"
+    category="info"
+    docName="draft-handte-hybi-zstd-pcme-latest"
+    obsoletes=""
+    updates=""
+    submissionType="IETF"
+    xml:lang="en"
+    tocInclude="true"
+    symRefs="true"
+    sortRefs="true"
+    version="3">
   <front>
     <title abbrev="Zstd PCME">
       A Zstandard Per-Message Compression Extension for WebSocket
     </title>
     <seriesInfo name="Internet-Draft" value="draft-handte-hybi-zstd-pcme-latest"/>
+
     <author initials="W. F. P." surname="Handte" fullname="W. Felix P. Handte">
       <organization>Facebook, Inc.</organization>
       <address>
@@ -25,6 +38,7 @@
         <email>w@felixhandte.com</email>
       </address>
     </author>
+
     <author initials="F" surname="Gasper" fullname="Felipe Gasper">
       <organization>[TODO]</organization>
       <address>
@@ -38,31 +52,34 @@
         <email>felipe@felipegasper.com</email>
       </address>
     </author>
+
     <date/>
     <area>ART</area>
     <workgroup>Individual submission</workgroup>
+    <keyword>Zstandard</keyword>
+    <keyword>Zstd</keyword>
     <keyword>Compression</keyword>
     <keyword>WebSocket</keyword>
 
     <abstract>
       <t>
-        This document defines a Per-Message Compression Extension <xref target="RFC7692"/> for the WebSocket Protocol <xref target="RFC6455"/> based on the Zstandard compression format <xref target="RFC8478"/>.
+        This document defines a Per-Message Compression Extension <xref target="RFC7692"/> for the WebSocket Protocol <xref target="RFC6455"/> based on the Zstandard compression format <xref target="RFC8478"/>. This extension is then registered under the name <tt>permessage-zstd</tt>.
       </t>
       <t>
-        [TODO]
+        <cref>TODO</cref>
       </t>
     </abstract>
 
     <note>
       <name>Draft Development</name>
       <t>
-        [RFC Editor: Please remove this section before publication.]
+        <cref>RFC Editor: Please remove this section before publication.</cref>
       </t>
       <t>
-        The source code and issues list for this draft can be found at https://github.com/felixhandte/draft-handte-hybi-zstd-pcme.
+        The source code and issues list for this draft can be found at <eref target="https://github.com/felixhandte/draft-handte-hybi-zstd-pcme"/>.
       </t>
       <t>
-        Discussion of this draft takes place on the BiDirectional or Server-Initiated working group mailing list (hybi@ietf.org), which is archived at https://mailarchive.ietf.org/arch/browse/hybi/.
+        Discussion of this draft takes place on the BiDirectional or Server-Initiated working group mailing list (<eref target="mailto:hybi@ietf.org"/>), which is archived at <eref target="https://mailarchive.ietf.org/arch/browse/hybi/"/>.
       </t>
     </note>
   </front>
@@ -74,7 +91,7 @@
         This document defines a Per-Message Compression Extension <xref target="RFC7692"/> for the WebSocket Protocol <xref target="RFC6455"/> based on the Zstandard compression format <xref target="RFC8478"/>.
       </t>
       <t>
-        This extension is modeled on the "permessage-deflate" extension defined in <xref target="RFC7692"/>. It attempts as much as possible to present a compatible interface to its users, differing only internally (primarily in the use of a different underlying compression scheme and then how it maps the same options as the "permessage-deflate" extension to the configuration of Zstandard).
+        This extension is modeled on the <tt>permessage-deflate</tt> extension defined in <xref target="RFC7692"/>. It attempts as much as possible to present a compatible interface to its users, differing only internally (primarily in the use of a different underlying compression scheme and then how it maps the same options as the <tt>permessage-deflate</tt> extension to the configuration of Zstandard).
       </t>
     </section>
     <section anchor="defs">
@@ -82,49 +99,52 @@
       <section anchor="defs-reqs">
         <name>Requirements</name>
         <t>
-          The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in [RFC2119].
+          The key words "<bcp14>MUST</bcp14>", "<bcp14>MUST NOT</bcp14>", "<bcp14>REQUIRED</bcp14>", "<bcp14>SHALL</bcp14>", "<bcp14>SHALL NOT</bcp14>", "<bcp14>SHOULD</bcp14>", "<bcp14>SHOULD NOT</bcp14>", "<bcp14>RECOMMENDED</bcp14>", "<bcp14>MAY</bcp14>", and "<bcp14>OPTIONAL</bcp14>" in this document are to be interpreted as described in <xref target="RFC2119"/>.
         </t>
       </section>
       <section anchor="defs-ws">
         <name>WebSocket Terminology</name>
         <t>
-          [TODO]
+          This document references the procedure to <em>Fail the WebSocket Connection</em>. This procedure is defined in <xref target="RFC6455" section="7.1.7"/>.
+        </t>
+        <t>
+          This document references the event that <em>The WebSocket Connection is Established</em> and the event that <em>A WebSocket Message Has Been Received</em>. These events are defined in Sections <relref section="4.1" target="RFC6455" displayFormat="bare"/> and <relref section="6.2" target="RFC6455" displayFormat="bare"/>, respectively, of <xref target="RFC6455"/>.
         </t>
       </section>
       <section anchor="defs-zstd">
         <name>Zstandard Definitions</name>
         <t>
-          [TODO]
+          This document talks about Zstandard frames
         </t>
       </section>
     </section>
     <section anchor="extension-params">
       <name>Extension Parameters</name>
       <t>
-        [TODO]
+        <cref>TODO</cref>
       </t>
       <section anchor="extension-param-server-no-context-takeover">
-        <name>"server_no_context_takeover"</name>
+        <name><tt>server_no_context_takeover</tt></name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
       <section anchor="extension-param-client-no-context-takeover">
-        <name>"client_no_context_takeover"</name>
+        <name><tt>client_no_context_takeover</tt></name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
       <section anchor="extension-param-server-max-window-bits">
-        <name>"server_max_window_bits"</name>
+        <name><tt>server_max_window_bits</tt></name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
       <section anchor="extension-param-client-max-window-bits">
-        <name>"client_max_window_bits"</name>
+        <name><tt>client_max_window_bits</tt></name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
     </section>
@@ -133,13 +153,13 @@
       <section anchor="compression">
         <name>Compression</name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
       <section anchor="decompression">
         <name>Decompression</name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
     </section>
@@ -150,50 +170,43 @@
         <t>
           IANA is requested to register the following WebSocket extension name in the "WebSocket Extension Name Registry" defined in <xref target="RFC6455"/>.
         </t>
-        <dl newline="false" spacing="normal">
+        <dl>
           <dt>Extension Identifier:</dt>
-          <dd>
-              permessage-zstd
-            </dd>
+          <dd><tt>permessage-zstd</tt></dd>
           <dt>Extension Common Name:</dt>
-          <dd>
-              WebSocket Per-Message Compression using Zstandard
-            </dd>
+          <dd>WebSocket Per-Message Compression using Zstandard</dd>
           <dt>Extension Definition:</dt>
-          <dd>
-              This document
-            </dd>
+          <dd>This document</dd>
           <dt>Known Incompatible Extensions:</dt>
-          <dd>
-              None
-            </dd>
+          <dd>None</dd>
         </dl>
         <t>
-          The "permessage-zstd" extension name is used in the "Sec-WebSocket-Extensions" header in the WebSocket opening handshake to negotiate use of the "permessage-zstd" extension.
+          The <tt>permessage-zstd</tt> extension name is used in the <tt>Sec-WebSocket-Extensions</tt> header in the WebSocket opening handshake to negotiate use of the <tt>permessage-zstd</tt> extension.
         </t>
       </section>
     </section>
     <section anchor="security">
       <name>Security Considerations</name>
       <t>
-        [TODO]
+        <cref>TODO</cref>
+        <xref target="CRIME"/>
       </t>
     </section>
     <section anchor="future-work">
       <name>Future Work</name>
       <t>
-        [TODO]
+        <cref>TODO</cref>
       </t>
       <section anchor="future-work-independent-negotiation">
         <name>Independent Negotiation for Each Direction</name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
       <section anchor="future-work-dictionaries">
         <name>Dictionaries</name>
         <t>
-          [TODO]
+          <cref>TODO</cref>
         </t>
       </section>
     </section>
