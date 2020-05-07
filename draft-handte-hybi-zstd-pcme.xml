@@ -88,12 +88,13 @@
     <section anchor="intro">
       <name>Introduction</name>
       <t>
-        This document defines a Per-Message Compression Extension <xref target="RFC7692"/> for the WebSocket Protocol <xref target="RFC6455"/> based on the Zstandard compression format <xref target="RFC8478"/>.
+        This document defines a Per-Message Compression Extension <xref target="RFC7692"/> for the WebSocket Protocol <xref target="RFC6455"/> that uses the Zstandard compressor <xref target="RFC8478"/>. This extension is identified by the name <tt>permessage-zstd</tt>.
       </t>
       <t>
-        This extension is modeled on the <tt>permessage-deflate</tt> extension defined in <xref target="RFC7692"/>. It attempts as much as possible to present a compatible interface to its users, differing only internally (primarily in the use of a different underlying compression scheme and then how it maps the same options as the <tt>permessage-deflate</tt> extension to the configuration of Zstandard).
+        This extension is modeled on the <tt>permessage-deflate</tt> extension defined in <xref target="RFC7692"/>. It attempts as much as possible to present a compatible interface to its users, differing primarily internally (in the use of a different underlying compression scheme and then how it maps the same options and semantics as the <tt>permessage-deflate</tt> extension to that different compression scheme). These differences are listed in <xref target="differences"/>.
       </t>
     </section>
+
     <section anchor="defs">
       <name>Definitions</name>
       <section anchor="defs-reqs">
@@ -103,7 +104,7 @@
         </t>
       </section>
       <section anchor="defs-ws">
-        <name>WebSocket Terminology</name>
+        <name>WebSocket</name>
         <t>
           This document references the procedure to <em>Fail the WebSocket Connection</em>. This procedure is defined in <xref target="RFC6455" section="7.1.7"/>.
         </t>
@@ -112,12 +113,122 @@
         </t>
       </section>
       <section anchor="defs-zstd">
-        <name>Zstandard Definitions</name>
+        <name>Zstandard</name>
         <t>
-          This document talks about Zstandard frames
+          This document uses the terms <em>Zstd Frame</em> and <em>Zstd Block</em> to refer respectively to the <em>frame</em> defined in Section <relref section="3.1" target="RFC8478" displayFormat="bare"/> and the <em>block</em> defined in Section <relref section="3.1.1.2" target="RFC8478" displayFormat="bare"/> of <xref target="RFC8478"/>.
         </t>
       </section>
     </section>
+
+    <section anchor="extension">
+      <name>The <tt>permessage-zstd</tt> Extension</name>
+      <t>
+        Four extension parameters are defined for <tt>permessage-zstd</tt> to help endpoints negotiate constraints on how much history will have to be retained in order to be able to decompress new messages.
+      </t>
+      <ul>
+        <li><tt>server_no_context_takeover</tt></li>
+        <li><tt>client_no_context_takeover</tt></li>
+        <li><tt>server_max_window_bits</tt></li>
+        <li><tt>client_max_window_bits</tt></li>
+      </ul>
+      <t>
+        Although both the context takeover and window size controls target the same broad goal of constraining history retention requirements, they do so in different ways. These two methods are independently useful.
+      </t>
+      <t>
+        <cref>TODO</cref>
+      </t>
+    </section>
+
+    <section anchor="transformation">
+      <name>Message Transformation</name>
+      <section anchor="encoding">
+        <name>Encoding</name>
+        <t>
+          A sender using the <tt>permessage-zstd</tt> extension encodes a message by performing Zstandard compression on the payload of the message.
+        </t>
+        <t>
+          The concatenation of all compressed message payloads sent by a peer over the lifetime of the WebSocket connection <bcp14>MUST</bcp14> form a sequence of zero or more <em>Zstd Frames</em> or <em>Zstd Skippable Frames</em>.
+        </t>
+        <t>
+          An empty output is a valid representation of an empty input.
+        </t>
+        <t>
+          The specific configuration of Zstandard for this compression is partially defined by the extension parameters defined in <xref target="extension-params"/>.
+        </t>
+        <t>
+          Although the <tt>permessage-zstd</tt> extension negotiates compression in both directions simultaneously, once negotiated, the encoding of messages sent in one direction is independent of messages sent in the other. That is, the stream history used as context in the compression of a message is the ordered concatenation of encoded messages sent in that same direction, not all messages sent in the WebSocket connection.
+        </t>
+        <t>
+          Messages that are sent un-encoded (with <tt>Per-Message Compressed</tt> bit equal to 0) do not participate in the context history used to compress subsequent messages.
+        </t>
+        <t>
+          <cref>TODO</cref>
+        </t>
+        <section anchor="encoding-independent-payloads">
+          <name>Independent Payloads</name>
+          <t>
+            A server <bcp14>MUST</bcp14> produce <em>independent payloads</em> if the <tt>agreed parameters</tt> contain the <tt>server_no_context_takeover</tt> option. Otherwise, a server <bcp14>MAY</bcp14> produce <em>independent payloads</em>.
+          </t>
+          <t>
+            A client <bcp14>MUST</bcp14> produce <em>independent payloads</em> if the <tt>agreed parameters</tt> contain the <tt>client_no_context_takeover</tt> option. Otherwise, a client <bcp14>MAY</bcp14> produce <em>independent payloads</em>.
+          </t>
+          <t>
+            When producing an <em>independent payload</em>, each encoded message payload <bcp14>MUST</bcp14> be composed of zero or more complete <em>Zstd Frames</em> or <em>Zstd Skippable Frames</em>.
+          </t>
+        </section>
+        <section anchor="encoding-dependent-payloads">
+          <name>Dependent Payloads</name>
+          <t>
+            Since <em>Zstd Frames</em> are independent of one another, a sender that wishes to emit payloads that exploit the context of the stream's history must hold a single <em>Zstd Frame</em> open between WebSocket payloads.
+          </t>
+          <t>
+            In this mode, the sender <bcp14>MAY</bcp14> end a <em>Zstd Frame</em> (and subsequently begin another) at any time. Each encoded WebSocket message payload <bcp14>MUST</bcp14> instead begin and end at a <em>Zstd Block</em> boundary. That is, in <em>independent payloads</em> mode, neither <em>Zstd Frames</em> nor <em>Zstd Blocks</em> can be split between WebSocket payloads. When not in <em>independent payloads</em> mode, <em>Zstd Frames</em> can be split, but <em>Zstd Blocks</em> still must not be.
+          </t>
+          <section anchor="encoding-dependent-payloads-example">
+            <name>Example</name>
+            <t>
+              <cref>TODO</cref>
+            </t>
+            <artwork>
+WebSocket Payloads: [......][..........][............]
+WebSocket Frames:   [......][....][....][.....][.....]
+Zstd Frames:        [..........][....................]
+Zstd Blocks:        [..][..][..][..][..][..][..][..][]
+            </artwork>
+          </section>
+        </section>
+        <section anchor="encoding-magic">
+          <name>Magic-Less Frames</name>
+          <t>
+            If the <tt>server_no_zstd_magic</tt> option appears in the <tt>agreed parameters</tt> set for a connection, a server <bcp14>MUST</bcp14> produce <em>magic-less frames</em>, otherwise the server <bcp14>MUST NOT</bcp14> produce <em>magic-less frames</em>.
+          </t>
+          <t>
+            If the <tt>client_no_zstd_magic</tt> option appears in the <tt>agreed parameters</tt> set for a connection, a client <bcp14>MUST</bcp14> produce <em>magic-less frames</em>, otherwise the client <bcp14>MUST NOT</bcp14> produce <em>magic-less frames</em>.
+          </t>
+          <t>
+            If a sender has negotiated the use of <em>magic-less frames</em>,
+            the first four bytes of a <em>Zstd Frame</em> are stripped. Without this identifier, it is no longer possible to distinguish <em>Zstd Frames</em> and <em>Zstd Skippable Frames</em>. For this reason, when producing <em>magic-less frames</em>, a sender <bcp14>MUST NOT</bcp14> emit <em>Zstd Skippable Frames</em>.
+          </t>
+        </section>
+      </section>
+      <section anchor="decompression">
+        <name>Decoding</name>
+        <t>
+          <cref>TODO</cref>
+        </t>
+        <t>
+          A decoder <bcp14>MUST</bcp14> accept compressed payloads comprised of multiple <em>Zstd Frames</em>, even if the
+        </t>
+        <section anchor="decoding-magic">
+          <name>Magic-Less Frames</name>
+          <t>
+            If a receiver has negotiated the use of <em>magic-less frames</em>,
+            every frame is assumed to be a <em>Zstd Frame</em>
+          </t>
+        </section>
+      </section>
+    </section>
+
     <section anchor="extension-params">
       <name>Extension Parameters</name>
       <t>
@@ -126,11 +237,17 @@
       <section anchor="extension-param-server-no-context-takeover">
         <name><tt>server_no_context_takeover</tt></name>
         <t>
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <relref section="7.1.1.1" target="RFC7692"/>.
+        </t>
+        <t>
           <cref>TODO</cref>
         </t>
       </section>
       <section anchor="extension-param-client-no-context-takeover">
         <name><tt>client_no_context_takeover</tt></name>
+        <t>
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <relref section="7.1.1.2" target="RFC7692"/>.
+        </t>
         <t>
           <cref>TODO</cref>
         </t>
@@ -138,31 +255,59 @@
       <section anchor="extension-param-server-max-window-bits">
         <name><tt>server_max_window_bits</tt></name>
         <t>
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <relref section="7.1.2.1" target="RFC7692"/>, with the exception that the parameter's minimum value is 10 and the maximum value is 31.
+        </t>
+        <t>
           <cref>TODO</cref>
         </t>
       </section>
       <section anchor="extension-param-client-max-window-bits">
         <name><tt>client_max_window_bits</tt></name>
         <t>
-          <cref>TODO</cref>
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <relref section="7.1.2.2" target="RFC7692"/>, with the exception that the parameter's minimum value is 10 and the maximum value is 31.
         </t>
-      </section>
-    </section>
-    <section anchor="transformation">
-      <name>Message Payload Transformation</name>
-      <section anchor="compression">
-        <name>Compression</name>
         <t>
           <cref>TODO</cref>
         </t>
       </section>
-      <section anchor="decompression">
-        <name>Decompression</name>
+      <section anchor="extension-param-server-no-zstd-magic">
+        <name><tt>server_no_zstd_magic</tt></name>
+        <t>
+          <em>Zstd Frames</em> normally begin with a fixed four byte prefix (hexadecimal <tt>28 B5 2F FD</tt>). This extension parameter signals that the server can and will.
+        </t>
+        <t>
+          <cref>TODO</cref>
+        </t>
+      </section>
+      <section anchor="extension-param-client-no-zstd-magic">
+        <name><tt>client_no_zstd_magic</tt></name>
+        <t>
+
+        </t>
         <t>
           <cref>TODO</cref>
         </t>
       </section>
     </section>
+
+    <section anchor="differences">
+      <name>Differences from <tt>permessage-deflate</tt></name>
+      <t>
+        Note: this section is <strong>non-normative</strong>.
+      </t>
+      <ul>
+        <li>
+          The <tt>server_max_window_bits</tt> and <tt>client_max_window_bits</tt> parameters have a different range of valid values (10 to 31, rather than 8 to 15).
+        </li>
+        <li>
+          The <tt>permessage-deflate</tt> extension (like its corresponding HTTP Content-Coding, defined in <relref section="4.2.2" target="RFC7230"/>) requires the use of a single deflate frame, which is divided into blocks. In contrast, this extension (like its corresponding HTTP Content-Coding, defined in <relref section="6.2" target="RFC8478"/>) permits the use of many <em>Zstd Frames</em> over the lifetime of a connection.
+        </li>
+        <li>
+          No truncation of the output produced by the underlying compressor is performed by the encoder. Similarly, no static suffix is added by the decoder to the compressed payload before being passed to the underlying compressor to be decompressed.
+        </li>
+      </ul>
+    </section>
+
     <section anchor="iana">
       <name>IANA Considerations</name>
       <section anchor="iana-websocket-extension-registry">
@@ -185,13 +330,16 @@
         </t>
       </section>
     </section>
+
     <section anchor="security">
       <name>Security Considerations</name>
       <t>
         <cref>TODO</cref>
         <xref target="CRIME"/>
+        <xref target="DICT-SEC"/>
       </t>
     </section>
+
     <section anchor="future-work">
       <name>Future Work</name>
       <t>
@@ -307,6 +455,35 @@
             <author initials="T." surname="Duong" fullname="Thai Duong"/>
             <date year="2012"/>
           </front>
+        </reference>
+
+        <reference anchor="DICT-SEC">
+          <front>
+            <title>Security Considerations Regarding Compression Dictionaries</title>
+            <author initials='W. F. P.' surname='Handte' fullname='W. Felix P. Handte'>
+              <organization>Facebook, Inc.</organization>
+            </author>
+            <date month="October" year="2019"/>
+          </front>
+          <seriesInfo name="Internet-Draft" value="draft-handte-httpbis-dict-sec"/>
+        </reference>
+
+        <reference anchor="RFC7230" target="https://www.rfc-editor.org/info/rfc7230">
+          <front>
+            <title>
+              Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing
+            </title>
+            <author initials="R." surname="Fielding" fullname="R. Fielding" role="editor" />
+            <author initials="J." surname="Reschke" fullname="J. Reschke" role="editor" />
+            <date year="2014" month="June"/>
+            <abstract>
+              <t>
+                The Hypertext Transfer Protocol (HTTP) is a stateless application-level protocol for distributed, collaborative, hypertext information systems. This document provides an overview of HTTP architecture and its associated terminology, defines the "http" and "https" Uniform Resource Identifier (URI) schemes, defines the HTTP/1.1 message syntax and parsing requirements, and describes related security concerns for implementations.
+              </t>
+            </abstract>
+          </front>
+          <seriesInfo name="RFC" value="7230"/>
+          <seriesInfo name="DOI" value="10.17487/RFC7230"/>
         </reference>
       </references>
     </references>
