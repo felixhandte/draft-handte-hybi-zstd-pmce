@@ -1,0 +1,616 @@
+
+
+
+
+Individual submission                                    W. F. P. Handte
+Internet-Draft                                            Facebook, Inc.
+Intended status: Informational                                 F. Gasper
+Expires: 15 November 2020                                         [TODO]
+                                                             14 May 2020
+
+
+      A Zstandard Per-Message Compression Extension for WebSocket
+                   draft-handte-hybi-zstd-pmce-latest
+
+Abstract
+
+   This document defines a Per-Message Compression Extension [RFC7692]
+   for the WebSocket Protocol [RFC6455] based on the Zstandard
+   compression format [RFC8478].  This extension is then registered
+   under the name "permessage-zstd".
+
+   // TODO
+
+Draft Development
+
+   This note is to be removed before publishing as an RFC.
+
+   The source code and issues list for this draft can be found at
+   https://github.com/felixhandte/draft-handte-hybi-zstd-pmce.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 15 November 2020.
+
+Copyright Notice
+
+   Copyright (c) 2020 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 1]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+   2.  Definitions . . . . . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Requirements  . . . . . . . . . . . . . . . . . . . . . .   3
+     2.2.  WebSocket . . . . . . . . . . . . . . . . . . . . . . . .   3
+     2.3.  Zstandard . . . . . . . . . . . . . . . . . . . . . . . .   3
+   3.  The "permessage-zstd" Extension . . . . . . . . . . . . . . .   3
+   4.  Extension Parameters  . . . . . . . . . . . . . . . . . . . .   4
+     4.1.  "server_no_context_takeover"  . . . . . . . . . . . . . .   4
+     4.2.  "client_no_context_takeover"  . . . . . . . . . . . . . .   4
+     4.3.  "server_max_window_bits"  . . . . . . . . . . . . . . . .   4
+     4.4.  "client_max_window_bits"  . . . . . . . . . . . . . . . .   5
+     4.5.  "server_no_zstd_magic"  . . . . . . . . . . . . . . . . .   5
+     4.6.  "client_no_zstd_magic"  . . . . . . . . . . . . . . . . .   5
+   5.  Message Transformation  . . . . . . . . . . . . . . . . . . .   5
+     5.1.  Encoding  . . . . . . . . . . . . . . . . . . . . . . . .   5
+       5.1.1.  Fragmentation . . . . . . . . . . . . . . . . . . . .   6
+       5.1.2.  Window  . . . . . . . . . . . . . . . . . . . . . . .   6
+       5.1.3.  Inter-Payload Dependencies  . . . . . . . . . . . . .   6
+       5.1.4.  Magic-Less Frames . . . . . . . . . . . . . . . . . .   7
+     5.2.  Decoding  . . . . . . . . . . . . . . . . . . . . . . . .   7
+       5.2.1.  Window  . . . . . . . . . . . . . . . . . . . . . . .   8
+       5.2.2.  Magic-Less Frames . . . . . . . . . . . . . . . . . .   8
+   6.  Differences from "permessage-deflate" . . . . . . . . . . . .   8
+   7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
+     7.1.  WebSocket Extension Name  . . . . . . . . . . . . . . . .   9
+   8.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+   9.  Future Work . . . . . . . . . . . . . . . . . . . . . . . . .   9
+     9.1.  Independent Negotiation for Each Direction  . . . . . . .   9
+     9.2.  Dictionaries  . . . . . . . . . . . . . . . . . . . . . .   9
+   10. References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
+     10.1.  Normative References . . . . . . . . . . . . . . . . . .   9
+     10.2.  Informative References . . . . . . . . . . . . . . . . .  10
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  10
+
+
+
+
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 2]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+1.  Introduction
+
+   This document defines a Per-Message Compression Extension [RFC7692]
+   for the WebSocket Protocol [RFC6455] that uses the Zstandard
+   compressor [RFC8478].  This extension is identified by the name
+   "permessage-zstd".
+
+   This extension is modeled on the "permessage-deflate" extension
+   defined in [RFC7692].  It attempts as much as possible to present a
+   compatible interface to its users, differing primarily internally (in
+   the use of a different underlying compression scheme and then how it
+   maps the same options and semantics as the "permessage-deflate"
+   extension to that different compression scheme).  These differences
+   are listed in Section 6.
+
+2.  Definitions
+
+2.1.  Requirements
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in BCP 14 [RFC2119]
+   [RFC8174] when, and only when, they appear in all capitals, as shown
+   here.
+
+2.2.  WebSocket
+
+   This document references the procedure to _Fail the WebSocket
+   Connection_. This procedure is defined in Section 7.1.7 of [RFC6455].
+
+   This document references the event that _The WebSocket Connection is
+   Established_ and the event that _A WebSocket Message Has Been
+   Received_. These events are defined in Sections 4.1 and 6.2,
+   respectively, of [RFC6455].
+
+2.3.  Zstandard
+
+   This document uses the terms _Zstd Frame_, _Zstd Skippable Frame_,
+   and _Zstd Block_ to refer respectively to the _Zstandard Frame_
+   defined in Section 3.1.1, the _Skippable Frame_ defined in
+   Section 3.1.2, and the _Block_ defined in Section 3.1.1.2 of
+   [RFC8478].
+
+3.  The "permessage-zstd" Extension
+
+   Four extension parameters are defined for "permessage-zstd" to help
+   endpoints negotiate constraints on how much history will have to be
+   retained in order to be able to decompress new messages.
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 3]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+   *  "server_no_context_takeover"
+
+   *  "client_no_context_takeover"
+
+   *  "server_max_window_bits"
+
+   *  "client_max_window_bits"
+
+   Although both the context takeover and window size controls target
+   the same broad goal of constraining history retention requirements,
+   they do so in different ways.  These two methods are independently
+   useful.
+
+   // TODO
+
+4.  Extension Parameters
+
+   // TODO
+
+4.1.  "server_no_context_takeover"
+
+   This option has the same semantics, behavior, and requirements as the
+   parameter of the same name defined in Section 7.1.1.1 of [RFC7692].
+
+   // TODO
+
+4.2.  "client_no_context_takeover"
+
+   This option has the same semantics, behavior, and requirements as the
+   parameter of the same name defined in Section 7.1.1.2 of [RFC7692].
+
+   // TODO
+
+4.3.  "server_max_window_bits"
+
+   This option has the same semantics, behavior, and requirements as the
+   parameter of the same name defined in Section 7.1.2.1 of [RFC7692],
+   with the following exceptions:
+
+   *  The parameter's minimum value is 10 and its maximum value is 31.
+
+   *  A server which receives this option MUST either decline the
+      extension negotiation or accept the parameter.
+      // I believe this is what the deflate extension intends to
+      specify,
+      // but it's not 100% clear.
+
+   // TODO
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 4]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+4.4.  "client_max_window_bits"
+
+   This option has the same semantics, behavior, and requirements as the
+   parameter of the same name defined in Section 7.1.2.2 of [RFC7692],
+   with the exception that the parameter's minimum value is 10 and the
+   maximum value is 31.
+
+   // TODO
+
+4.5.  "server_no_zstd_magic"
+
+   _Zstd Frames_ normally begin with a fixed four byte prefix
+   (hexadecimal "28 B5 2F FD").  This extension parameter signals that
+   the server can and will...
+
+   // TODO
+
+4.6.  "client_no_zstd_magic"
+
+
+   // TODO
+
+5.  Message Transformation
+
+5.1.  Encoding
+
+   A sender using the "permessage-zstd" extension encodes a message by
+   performing Zstandard compression on the payload of the message.  The
+   resulting encoded message is subject to the following constraints:
+
+   The concatenation of all compressed message payloads sent by a peer
+   over the lifetime of the WebSocket connection MUST form a sequence of
+   zero or more _Zstd Frames_ and _Zstd Skippable Frames_.
+
+   Sometimes, as described in Section 5.1.3.1, a single _Zstd Frame_ can
+   be held open across messages and used to compress their contents in a
+   single stream.  Even when in this mode, each encoded message payload
+   MUST represent exactly the content of the message payload it encodes.
+   That is, a _Zstd Frame_ that is held open MUST nonetheless be flushed
+   at every message payload boundary.
+
+   Note: an empty output is a valid representation of an empty input.
+
+   The specific configuration of Zstandard for this compression is
+   partially defined by the extension parameters defined in Section 4.
+
+   // TODO
+
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 5]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+5.1.1.  Fragmentation
+
+   Encoded message payloads MAY be arbitrarily fragmented by the
+   WebSocket transport.  As an OPTIONAL optimization, implementations
+   MAY align _Zstd Block_ boundaries with WebSocket Fragment boundaries.
+
+5.1.2.  Window
+
+   // The _Sending Window Size_ is controls the amount of memory
+   // required to compress and decompress a stream of messages.  For
+   // servers, their _Sending Window Size_ an internal parameter by each
+   // peer.  For servers, if the from the connection's "agreed
+   // parameters" set.  The server's _Window Size_ is
+
+   In the absence of negotiation, to aid interoperability, it is
+   RECOMMENDED that sender's use a _Window Size_ no larger than 8 MB.
+
+   Note that although the "permessage-zstd" extension negotiates
+   compression in both directions simultaneously, once negotiated, the
+   encoding of messages sent in one direction is independent of messages
+   sent in the other.  That is, the stream history used as context in
+   the compression of a message is the ordered concatenation of encoded
+   messages sent in that same direction, not all messages sent in the
+   WebSocket connection.
+
+5.1.3.  Inter-Payload Dependencies
+
+5.1.3.1.  Dependent Payloads
+
+   Since _Zstd Frames_ are independent of one another, a sender that
+   wishes to emit payloads that exploit the stream's history must hold a
+   _Zstd Frame_ open between WebSocket payloads.
+
+   In this mode, the sender MAY end a _Zstd Frame_ (and subsequently
+   begin another) at any time.  (However, the _Zstd Frame Header_ SHOULD
+   NOT be split between payloads or fragments.
+   // Should this be a requirement?MUST instead begin and end at a _Zstd
+   Block_ boundary.  That is, in _independent payloads_ mode, neither
+   _Zstd Frames_ nor _Zstd Blocks_ can be split between WebSocket
+   payloads.  When not in _independent payloads_ mode, _Zstd Frames_ can
+   be split, but _Zstd Blocks_ still must not be.
+
+   Messages that are sent un-encoded (with "Per-Message Compressed" bit
+   equal to 0) do not participate in the context history used to
+   compress subsequent messages.
+
+
+
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 6]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+5.1.3.1.1.  Example
+
+   // TODO
+
+     WebSocket Payloads:  [......][..........][............]
+     WebSocket Frames:    [......][....][....][.....][.....]
+     WebSocket Fragments: [..][..][.][.][....][..][.][.....]
+     Zstd Frames:         [..........][....................]
+     Zstd Blocks:         [..][..][..][..][..][..][..][..][]
+
+5.1.3.2.  Independent Payloads
+
+   A server MUST produce _independent payloads_ if the "agreed
+   parameters" contain the "server_no_context_takeover" option.
+   Otherwise, a server MAY produce _independent payloads_.
+
+   A client MUST produce _independent payloads_ if the "agreed
+   parameters" contain the "client_no_context_takeover" option.
+   Otherwise, a client MAY produce _independent payloads_.
+
+   When producing an _independent payload_, each encoded message payload
+   MUST be composed of zero or more complete _Zstd Frames_ or _Zstd
+   Skippable Frames_.
+
+   The constraints imposed by the negotiated window size still apply.
+
+5.1.4.  Magic-Less Frames
+
+   If the "server_no_zstd_magic" option appears in the "agreed
+   parameters" set for a connection, a server MUST produce _magic-less
+   frames_, otherwise the server MUST NOT produce _magic-less frames_.
+
+   If the "client_no_zstd_magic" option appears in the "agreed
+   parameters" set for a connection, a client MUST produce _magic-less
+   frames_, otherwise the client MUST NOT produce _magic-less frames_.
+
+   If a sender has negotiated the use of _magic-less frames_, the first
+   four bytes of a _Zstd Frame_ are stripped.  Without this identifier,
+   it is no longer possible to distinguish _Zstd Frames_ and _Zstd
+   Skippable Frames_. For this reason, when producing _magic-less
+   frames_, a sender MUST NOT emit _Zstd Skippable Frames_.
+
+5.2.  Decoding
+
+   // TODO
+
+   A decoder MUST accept compressed payloads comprised of multiple _Zstd
+   Frames_.
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 7]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+5.2.1.  Window
+
+   The _Window Size_
+
+   If a peer is unwilling to receive content with an arbitrarily large
+   _Window Size_ (in particular, up to 8 MB), the peer SHOULD send an
+   appropriate "server_max_window_bits" or "client_max_window_bits"
+   parameter during connection negotiation.
+
+   The _Required Window_ of a _Zstd Frame_, which describes how much
+   memory must be allocated to be able to decompress the frame, is the
+   _Window_Size_ derived from the frame's _Window_Descriptor_
+   (Section 3.1.1.1.2 of [RFC8478]) if the _Single_Segment_Flag_
+   (Section 3.1.1.1.1.2 of [RFC8478]) is unset, or the
+   _Frame_Content_Size_ (Section 3.1.1.1.1.1 of [RFC8478]) if the
+   _Single_Segment_Flag_ is set.
+
+   If a peer receives a _Zstd Frame_ whose _Required Window_ is larger
+   than the _Window Size_ negotiated for the sender, the peer SHOULD
+   _Fail the WebSocket Connection_.
+
+   Otherwise, if no _Window Size_ was negotiated, and a peer receives a
+   _Zstd Frame_ whose _Required Window_ is larger than they are willing
+   to handle, the peer MAY _Fail the WebSocket Connection_.
+
+5.2.2.  Magic-Less Frames
+
+   If a receiver has negotiated the use of _magic-less frames_, every
+   frame is assumed to be a _Zstd Frame_
+
+6.  Differences from "permessage-deflate"
+
+   Note: this section is *non-normative*.
+
+   *  The "server_max_window_bits" and "client_max_window_bits"
+      parameters have a different range of valid values (10 to 31,
+      rather than 8 to 15).
+
+   *  The "permessage-deflate" extension (like its corresponding HTTP
+      Content-Coding, defined in Section 4.2.2 of [RFC7230]) requires
+      the use of a single deflate frame, which is divided into blocks.
+      In contrast, this extension (like its corresponding HTTP Content-
+      Coding, defined in Section 6.2 of [RFC8478]) permits the use of
+      many _Zstd Frames_ over the lifetime of a connection.
+
+
+
+
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 8]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+   *  No truncation of the output produced by the underlying compressor
+      is performed by the encoder.  Similarly, no static suffix is added
+      by the decoder to the compressed payload before being passed to
+      the underlying compressor to be decompressed.
+
+7.  IANA Considerations
+
+7.1.  WebSocket Extension Name
+
+   IANA is requested to register the following WebSocket extension name
+   in the "WebSocket Extension Name Registry" defined in [RFC6455].
+
+   Extension Identifier:  "permessage-zstd"
+
+   Extension Common Name:  WebSocket Per-Message Compression using
+      Zstandard
+
+   Extension Definition:  This document
+
+   Known Incompatible Extensions:  None
+
+   The "permessage-zstd" extension name is used in the "Sec-WebSocket-
+   Extensions" header in the WebSocket opening handshake to negotiate
+   use of the "permessage-zstd" extension.
+
+8.  Security Considerations
+
+   // TODO
+
+   [CRIME] [DICT-SEC]
+
+9.  Future Work
+
+   // TODO
+
+9.1.  Independent Negotiation for Each Direction
+
+   // TODO
+
+9.2.  Dictionaries
+
+   // TODO
+
+10.  References
+
+10.1.  Normative References
+
+
+
+
+
+Handte & Gasper         Expires 15 November 2020                [Page 9]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC6455]  Fette, I. and A. Melnikov, "The WebSocket Protocol",
+              RFC 6455, DOI 10.17487/RFC6455, December 2011,
+              <https://www.rfc-editor.org/info/rfc6455>.
+
+   [RFC7692]  Yoshino, T., "Compression Extensions for WebSocket",
+              RFC 7692, DOI 10.17487/RFC7692, December 2015,
+              <https://www.rfc-editor.org/info/rfc7692>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8478]  Collet, Y. and M. Kucherawy, Ed., "Zstandard Compression
+              and the application/zstd Media Type", RFC 8478,
+              DOI 10.17487/RFC8478, October 2018,
+              <https://www.rfc-editor.org/info/rfc8478>.
+
+10.2.  Informative References
+
+   [CRIME]    Rizzo, J. and T. Duong, "Compression Ratio Info-leak Made
+              Easy", 2012, <https://www.ekoparty.org/archive/2012/
+              CRIME_ekoparty2012.pdf>.
+
+   [DICT-SEC] Handte, W. F. P., "Security Considerations Regarding
+              Compression Dictionaries", Work in Progress, Internet-
+              Draft, draft-handte-httpbis-dict-sec, October 2019,
+              <https://tools.ietf.org/html/draft-handte-httpbis-dict-
+              sec>.
+
+   [RFC7230]  Fielding, R., Ed. and J. Reschke, Ed., "Hypertext Transfer
+              Protocol (HTTP/1.1): Message Syntax and Routing",
+              RFC 7230, DOI 10.17487/RFC7230, June 2014,
+              <https://www.rfc-editor.org/info/rfc7230>.
+
+Authors' Addresses
+
+   W. Felix P. Handte
+   Facebook, Inc.
+   770 Broadway
+   New York, NY 10003
+   United States of America
+
+   Email: w@felixhandte.com
+
+
+
+Handte & Gasper         Expires 15 November 2020               [Page 10]
+
+Internet-Draft                  Zstd PMCE                       May 2020
+
+
+   Felipe Gasper
+   [TODO]
+   [TODO]
+   [TODO]
+
+   Email: felipe@felipegasper.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Handte & Gasper         Expires 15 November 2020               [Page 11]

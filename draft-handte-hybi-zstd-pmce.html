@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>A Zstandard Per-Message Compression Extension for WebSocket</title>
+<meta content="W. Felix P. Handte" name="author">
+<meta content="Felipe Gasper" name="author">
+<meta content="
+       
+        This document defines a Per-Message Compression Extension   for the WebSocket Protocol   based on the Zstandard compression format  . This extension is then registered under the name  permessage-zstd .
+       
+       
+         TODO 
+       
+    " name="description">
+<meta content="xml2rfc 2.44.0" name="generator">
+<meta content="Zstandard" name="keyword">
+<meta content="Zstd" name="keyword">
+<meta content="Compression" name="keyword">
+<meta content="WebSocket" name="keyword">
+<meta content="draft-handte-hybi-zstd-pmce-latest" name="ietf.draft">
+<link href="draft-handte-hybi-zstd-pmce.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@import url('https://martinthomson.github.io/i-d-template/fonts.css');
+
+html {
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --small-font-size: 14.5px;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+#title, h1, h2, h3, h4, h5, h6 {
+  font-family: "Cabin Condensed", sans-serif;
+  font-weight: 600;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+#title {
+  padding: 1em 0 0.2em;
+  font-size: 32px;
+  line-height: 40px;
+  clear: both;
+}
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 26px;
+}
+h4, h5, h6 {
+  font-size: 18px;
+  line-height: 22px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+}
+#abstract+p, #abstract+p code, #abstract+p samp, #abstract+p tt {
+  font-size: 18px;
+  line-height: 24px;
+}
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div, span {
+  position: relative;
+}
+div {
+  margin: 0;
+}
+.alignRight.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignRight.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignRight {
+  margin: 1em 0;
+}
+.alignRight > *:first-child {
+  border: none;
+  margin: 0;
+  float: right;
+  clear: both;
+}
+.alignRight > *:nth-child(2) {
+  clear: both;
+  display: block;
+  border: none;
+}
+svg {
+  display: block;
+}
+.alignCenter.art-text {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  padding: 0.5em 1em 0;
+  margin-bottom: 0.5em;
+}
+.alignCenter.art-text pre {
+  padding: 0;
+  width: auto;
+}
+.alignCenter {
+  margin: 1em 0;
+}
+.alignCenter > *:first-child {
+  border: none;
+  /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+     support flexbox yet.
+  */
+  display: table;
+  margin: 0 auto;
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 1em 2em;
+}
+ol ol, ul ul, ol ul, ul ol {
+  margin-left: 1em;
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+.ulCompact li {
+  margin: 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+}
+ul.empty li, .ulEmpty li {
+  margin-top: 0.5em;
+}
+ul.compact, .ulCompact,
+ol.compact, .olCompact {
+  line-height: 100%;
+  margin: 0 0 0 2em;
+}
+
+/* definition lists */
+dl {
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl > dd {
+  margin-bottom: .8em;
+  min-height: 1.3em;
+}
+dl.compact > dd, .dlCompact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+
+/* links */
+a, a[href].selfRef:hover {
+  text-decoration: none;
+}
+a[href].selfRef {
+  color: var(--text-color);
+}
+a[href] {
+  color: var(--link-color);
+}
+a[href]:hover {
+  text-decoration: underline;
+}
+a[href].selfRef:hover {
+  background-color: var(--highlight-color);
+}
+a.xref {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px 'Oxygen Mono', monospace;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+}
+figure blockquote {
+  margin: 0.8em 0.4em 0.4em;
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+}
+@media screen {
+  pre {
+    display: inline-block;
+    overflow-x: auto;
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  pre + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+  table {
+    display: inline-block;
+    overflow-x: auto;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  background-color: var(--highlight-color);
+  border: 1px solid var(--line-color);
+  border-radius: 3px;
+  margin: 1em 0;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.5em 0.75em;
+}
+th {
+  text-align: left;
+  background-color: #eee;
+}
+tr:nth-child(2n) > td {
+  background-color: var(--background-color);
+}
+tr:nth-child(2n+1) > td {
+  background-color: var(--highlight-color);
+}
+thead+tbody tr:nth-child(2n) > td {
+  background-color: var(--highlight-color);
+}
+thead+tbody tr:nth-child(2n+1) > td {
+  background-color: var(--background-color);
+}
+table caption {
+  margin: 0;
+  padding: 3px 1em;
+  border-top: 1px solid var(--line-color);
+}
+table p {
+  /* XXX to avoid bottom margin on table row signifiers. If paragraphs should
+     be allowed within tables more generally, it would be far better to select on a class. */
+  margin: 0;
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  visibility: hidden;
+  user-select: none;
+}
+a.pilcrow[href] { color: #ddd; }
+a.pilcrow[href]:hover { text-decoration: none; }
+@media screen {
+  :hover > a.pilcrow {
+    visibility: visible;
+  }
+  a.pilcrow:hover {
+    background-color: transparent;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+}
+
+.role {
+  font-variant: all-small-caps;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 8em;
+}
+#identifiers dt {
+  width: var(--identifier-width);
+  margin: 0;
+  clear: left;
+  float: left;
+  text-align: right;
+}
+#identifiers dd {
+  margin: 0 0 0 calc(1em + var(--identifier-width));
+  min-width: 5em;
+}
+#identifiers .authors .author {
+  display: inline-block;
+  margin-right: 1.5em;
+}
+#identifiers .authors .org {
+  font-style: italic;
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+}
+.docInfo .prepared {
+  float: left;
+}
+.docInfo .prepared {
+  float: right;
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+}
+#toc nav ul {
+  margin: 0 0.5em 0 0;
+  padding: 0;
+  list-style: none;
+}
+#toc nav li {
+  line-height: 1.3em;
+  margin: 0.75em 0;
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+}
+#toc a.xref {
+  white-space: normal;
+}
+/* references */
+.references dt {
+  text-align: right;
+  font-weight: bold;
+  min-width: 7em;
+}
+.references dd {
+  margin-left: 8em;
+  overflow: auto;
+}
+
+.refInstance {
+  margin-bottom: 1.25em;
+}
+
+.references .ascii {
+  margin-bottom: 0.25em;
+}
+
+/* index */
+.index ul {
+  margin: 0 0 0 1em;
+  padding: 0;
+  list-style: none;
+}
+.index ul ul {
+  margin: 0;
+}
+.index li {
+  margin: 0;
+  text-indent: -2em;
+  padding-left: 2em;
+  padding-bottom: 5px;
+}
+.indexIndex {
+  margin: 0.5em 0 1em;
+}
+.index a {
+  font-weight: 700;
+}
+/* make the index two-column on all but the smallest screens */
+@media (min-width: 500px) {
+  .index ul {
+    column-count: 2;
+    column-gap: 20px;
+  }
+  .index ul ul {
+    column-count: 1;
+    column-gap: 0;
+  }
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  margin: 1em 0;
+}
+address.vcard .nameRole {
+  font-weight: 700;
+  margin-left: 0;
+}
+address.vcard .label {
+  margin: 0.5em 0;
+}
+address.vcard .type {
+  display: none;
+}
+.alternative-contact {
+  margin: 1.5em 0 1em;
+}
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses > section {
+    display: relative;
+    padding: 32px 0 0;
+    column-count: 2;
+    column-gap: 20px;
+  }
+  #name-authors-addresses {
+    position: absolute;
+    top: 0px;
+    column-span: all;
+  }
+  /* hack for break-inside: avoid-column */
+  #authors-addresses address {
+    display: inline-block;
+    break-inside: avoid-column;
+  }
+}
+
+/* temporary notes */
+.rfcEditorRemove::before {
+  position: absolute;
+  top: 0.2em;
+  right: 0.2em;
+  padding: 0.2em;
+  content: "The RFC Editor will remove this note";
+  color: #b76427;
+  background-color: rgba(249, 232, 105, 0.3);
+}
+.rfcEditorRemove {
+  position: relative;
+  padding-top: 1.8em;
+  background-color: rgba(249, 232, 105, 0.3);
+  border-radius: 3px;
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+/* alternative layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+  }
+  #toc.active {
+      opacity: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 2px 0 2px 6px;
+    padding-right: 1em;
+    font-size: 18px;
+    line-height: 24px;
+    min-width: 190px;
+    text-align: right;
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+  }
+  #toc h2::before { /* css hamburger */
+    float: right;
+    position: relative;
+    width: 1em;
+    height: 1px;
+    left: -164px;
+    margin: 8px 0 0 0;
+    background: white none repeat scroll 0 0;
+    box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+    content: "";
+  }
+  #toc nav {
+    display: none;
+    background-color: var(--background-color);
+    padding: 0.5em 1em 1em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    height: calc(100vh - 48px);
+    border-left: 1px solid #ddd;
+  }
+  #toc.active nav {
+    display: block;
+  }
+  /* Make the collapsed ToC header render white on gray also when it's a link */
+  #toc h2 a,
+  #toc h2 a:link,
+  #toc h2 a:focus,
+  #toc h2 a:hover,
+  #toc a.toplink,
+  #toc a.toplink:hover {
+    color: white;
+    background-color: #444;
+    text-decoration: none;
+  }
+  #toc a.toplink {
+    margin-top: 2px;
+  }
+}
+
+/* alternative layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+  }
+  #toc h2 {
+    margin: 0;
+    padding: 0.25em 1em 1em 0;
+  }
+  #toc nav {
+    display: block;
+    height: calc(90vh - 84px);
+    bottom: 0;
+    padding: 0.5em 0 2em;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+  #toc nav > ul  {
+    margin-bottom: 2em;
+  }
+  #toc ul {
+    margin: 0 0 0 4px;
+    font-size: var(--small-font-size);
+  }
+  #toc ul p, #toc ul li {
+    margin: 2px 0;
+    line-height: 22px;
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc, #n-introduction {
+    page-break-before: always;
+  }
+  #toc {
+    border-top: none;
+    padding-top: 0;
+  }
+  figure, pre {
+    page-break-inside: avoid;
+  }
+  figure {
+    overflow: scroll;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  h2+*, h3+*, h4+*, h5+*, h6+* {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Changes introduced to fix issues found during implementation */
+
+/* Separate body from document info even without intervening H1 */
+section {
+  clear: both;
+}
+
+/* Top align author divs, to avoid names without organization dropping level with org names */
+.author {
+  vertical-align: top;
+}
+
+/* Style section numbers with more space between number and title */
+.section-number {
+  padding-right: 0.5em;
+}
+
+/* Add styling for a link in the ToC that points to the top of the document */
+a.toplink {
+  float: right;
+  margin: 8px 0.5em 0;
+}
+
+/* Fix the dl styling to match the RFC 7992 attributes */
+dl > dt,
+dl.dlParallel > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.dlNewline > dt {
+  float: none;
+}
+
+/* Provide styling for table cell text alignment */
+table .text-left, table .text-left {
+  text-align: left;
+}
+table .text-center, table .text-center {
+  text-align: center;
+}
+table .text-right, table .text-right {
+  text-align: right;
+}
+
+/* Make the alternative author contact information look less like just another
+   author, and group it closer with the primary author contact information */
+.alternative-contact {
+  margin: 0.5em 0 0.25em 0;
+}
+address .non-ascii {
+  margin: 0 0 0 2em;
+}
+
+/* With it being possible to set tables with alignment
+  left, center, and right, { width: 100%; } does not make sense */
+table {
+  width: auto;
+}
+
+/* Avoid reference text that sits in a block with very wide left margin,
+   because of a long floating dt label.*/
+.references dd {
+  overflow: visible;
+}
+
+/* Control caption placement */
+caption {
+  caption-side: bottom;
+}
+
+/* Limit the width of the author address vcard, so names in right-to-left
+   script don't end up on the other side of the page. */
+
+address.vcard {
+  max-width: 20em;
+  margin-right: auto;
+}
+
+/* For address alignment dependent on LTR or RTL scripts */
+address div.left {
+  text-align: left;
+}
+address div.right {
+  text-align: right;
+}
+
+/* Provide table alignment support.  We can't use the alignX classes above
+   since they do unwanted things with caption and other styling. */
+table.right {
+ margin-left: auto;
+ margin-right: 0;
+}
+table.center {
+ margin-left: auto;
+ margin-right: auto;
+}
+table.left {
+ margin-left: 0;
+ margin-right: auto;
+}
+
+/* Give the table caption label the same styling as the figcaption */
+
+@media print {
+  .toplink {
+    display: none;
+  }
+
+  /* avoid overwriting the top border line with the ToC header */
+  #toc {
+    padding-top: 1px;
+  }
+
+  /* Avoid page breaks inside dl and author address entries */
+  dd {
+    page-break-before: avoid;
+  }
+  .vcard {
+    page-break-inside: avoid;
+  }
+
+}
+/* Tweak the bcp14 keyword presentation */
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+</style>
+<link href="rfc-local.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">Zstd PMCE</td>
+<td class="right">May 2020</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Handte &amp; Gasper</td>
+<td class="center">Expires 15 November 2020</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Individual submission</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-handte-hybi-zstd-pmce-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2020-05-14" class="published">14 May 2020</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Informational</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2020-11-15">15 November 2020</time></dd>
+<dt class="label-authors">Authors:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">W. F. P. Handte</div>
+<div class="org">Facebook, Inc.</div>
+</div>
+<div class="author">
+      <div class="author-name">F. Gasper</div>
+<div class="org">[TODO]</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">A Zstandard Per-Message Compression Extension for WebSocket</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">
+        This document defines a Per-Message Compression Extension <span>[<a href="#RFC7692" class="xref">RFC7692</a>]</span> for the WebSocket Protocol <span>[<a href="#RFC6455" class="xref">RFC6455</a>]</span> based on the Zstandard compression format <span>[<a href="#RFC8478" class="xref">RFC8478</a>]</span>. This extension is then registered under the name <code>permessage-zstd</code>.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">
+        <span class="cref">TODO</span><a href="#section-abstract-2" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-draft-development">
+<a href="#name-draft-development" class="section-name selfRef">Draft Development</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The source code and issues list for this draft can be found at <span><a href="https://github.com/felixhandte/draft-handte-hybi-zstd-pmce">https://github.com/felixhandte/draft-handte-hybi-zstd-pmce</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 15 November 2020.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2020 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Simplified BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Simplified BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="xref">1</a>.  <a href="#name-introduction" class="xref">Introduction</a><a href="#section-toc.1-1.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="xref">2</a>.  <a href="#name-definitions" class="xref">Definitions</a><a href="#section-toc.1-1.2.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="xref">2.1</a>.  <a href="#name-requirements" class="xref">Requirements</a><a href="#section-toc.1-1.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1" class="keepWithNext"><a href="#section-2.2" class="xref">2.2</a>.  <a href="#name-websocket" class="xref">WebSocket</a><a href="#section-toc.1-1.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.2.2.3">
+                <p id="section-toc.1-1.2.2.3.1"><a href="#section-2.3" class="xref">2.3</a>.  <a href="#name-zstandard" class="xref">Zstandard</a><a href="#section-toc.1-1.2.2.3.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="xref">3</a>.  <a href="#name-the-permessage-zstd-extensi" class="xref">The <code>permessage-zstd</code> Extension</a><a href="#section-toc.1-1.3.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="xref">4</a>.  <a href="#name-extension-parameters" class="xref">Extension Parameters</a><a href="#section-toc.1-1.4.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.4.2.1">
+                <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="xref">4.1</a>.  <a href="#name-server_no_context_takeover" class="xref"><code>server_no_context_takeover</code></a><a href="#section-toc.1-1.4.2.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="xref">4.2</a>.  <a href="#name-client_no_context_takeover" class="xref"><code>client_no_context_takeover</code></a><a href="#section-toc.1-1.4.2.2.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.4.2.3">
+                <p id="section-toc.1-1.4.2.3.1"><a href="#section-4.3" class="xref">4.3</a>.  <a href="#name-server_max_window_bits" class="xref"><code>server_max_window_bits</code></a><a href="#section-toc.1-1.4.2.3.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.4.2.4">
+                <p id="section-toc.1-1.4.2.4.1"><a href="#section-4.4" class="xref">4.4</a>.  <a href="#name-client_max_window_bits" class="xref"><code>client_max_window_bits</code></a><a href="#section-toc.1-1.4.2.4.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.4.2.5">
+                <p id="section-toc.1-1.4.2.5.1"><a href="#section-4.5" class="xref">4.5</a>.  <a href="#name-server_no_zstd_magic" class="xref"><code>server_no_zstd_magic</code></a><a href="#section-toc.1-1.4.2.5.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.4.2.6">
+                <p id="section-toc.1-1.4.2.6.1"><a href="#section-4.6" class="xref">4.6</a>.  <a href="#name-client_no_zstd_magic" class="xref"><code>client_no_zstd_magic</code></a><a href="#section-toc.1-1.4.2.6.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="xref">5</a>.  <a href="#name-message-transformation" class="xref">Message Transformation</a><a href="#section-toc.1-1.5.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="xref">5.1</a>.  <a href="#name-encoding" class="xref">Encoding</a><a href="#section-toc.1-1.5.2.1.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.1.2.1">
+                    <p id="section-toc.1-1.5.2.1.2.1.1"><a href="#section-5.1.1" class="xref">5.1.1</a>.  <a href="#name-fragmentation" class="xref">Fragmentation</a><a href="#section-toc.1-1.5.2.1.2.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.1.2.2">
+                    <p id="section-toc.1-1.5.2.1.2.2.1"><a href="#section-5.1.2" class="xref">5.1.2</a>.  <a href="#name-window" class="xref">Window</a><a href="#section-toc.1-1.5.2.1.2.2.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.1.2.3">
+                    <p id="section-toc.1-1.5.2.1.2.3.1"><a href="#section-5.1.3" class="xref">5.1.3</a>.  <a href="#name-inter-payload-dependencies" class="xref">Inter-Payload Dependencies</a><a href="#section-toc.1-1.5.2.1.2.3.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.1.2.4">
+                    <p id="section-toc.1-1.5.2.1.2.4.1"><a href="#section-5.1.4" class="xref">5.1.4</a>.  <a href="#name-magic-less-frames" class="xref">Magic-Less Frames</a><a href="#section-toc.1-1.5.2.1.2.4.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="xref">5.2</a>.  <a href="#name-decoding" class="xref">Decoding</a><a href="#section-toc.1-1.5.2.2.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.2.2.1">
+                    <p id="section-toc.1-1.5.2.2.2.1.1"><a href="#section-5.2.1" class="xref">5.2.1</a>.  <a href="#name-window-2" class="xref">Window</a><a href="#section-toc.1-1.5.2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.5.2.2.2.2">
+                    <p id="section-toc.1-1.5.2.2.2.2.1"><a href="#section-5.2.2" class="xref">5.2.2</a>.  <a href="#name-magic-less-frames-2" class="xref">Magic-Less Frames</a><a href="#section-toc.1-1.5.2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="xref">6</a>.  <a href="#name-differences-from-permessage" class="xref">Differences from <code>permessage-deflate</code></a><a href="#section-toc.1-1.6.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="xref">7</a>.  <a href="#name-iana-considerations" class="xref">IANA Considerations</a><a href="#section-toc.1-1.7.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.7.2.1">
+                <p id="section-toc.1-1.7.2.1.1"><a href="#section-7.1" class="xref">7.1</a>.  <a href="#name-websocket-extension-name" class="xref">WebSocket Extension Name</a><a href="#section-toc.1-1.7.2.1.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="xref">8</a>.  <a href="#name-security-considerations" class="xref">Security Considerations</a><a href="#section-toc.1-1.8.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="xref">9</a>.  <a href="#name-future-work" class="xref">Future Work</a><a href="#section-toc.1-1.9.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="xref">9.1</a>.  <a href="#name-independent-negotiation-for" class="xref">Independent Negotiation for Each Direction</a><a href="#section-toc.1-1.9.2.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="xref">9.2</a>.  <a href="#name-dictionaries" class="xref">Dictionaries</a><a href="#section-toc.1-1.9.2.2.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#section-10" class="xref">10</a>. <a href="#name-references" class="xref">References</a><a href="#section-toc.1-1.10.1" class="pilcrow">¶</a></p>
+<ul class="toc ulEmpty">
+<li class="toc ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#section-10.1" class="xref">10.1</a>.  <a href="#name-normative-references" class="xref">Normative References</a><a href="#section-toc.1-1.10.2.1.1" class="pilcrow">¶</a></p>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.10.2.2">
+                <p id="section-toc.1-1.10.2.2.1"><a href="#section-10.2" class="xref">10.2</a>.  <a href="#name-informative-references" class="xref">Informative References</a><a href="#section-toc.1-1.10.2.2.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</li>
+<li class="toc ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#section-appendix.a" class="xref"></a><a href="#name-authors-addresses" class="xref">Authors' Addresses</a><a href="#section-toc.1-1.11.1" class="pilcrow">¶</a></p>
+</li>
+</ul>
+</nav>
+</section>
+</div>
+<div id="intro">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">
+        This document defines a Per-Message Compression Extension <span>[<a href="#RFC7692" class="xref">RFC7692</a>]</span> for the WebSocket Protocol <span>[<a href="#RFC6455" class="xref">RFC6455</a>]</span> that uses the Zstandard compressor <span>[<a href="#RFC8478" class="xref">RFC8478</a>]</span>. This extension is identified by the name <code>permessage-zstd</code>.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">
+        This extension is modeled on the <code>permessage-deflate</code> extension defined in <span>[<a href="#RFC7692" class="xref">RFC7692</a>]</span>. It attempts as much as possible to present a compatible interface to its users, differing primarily internally (in the use of a different underlying compression scheme and then how it maps the same options and semantics as the <code>permessage-deflate</code> extension to that different compression scheme). These differences are listed in <a href="#differences" class="xref">Section 6</a>.<a href="#section-1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="defs">
+<section id="section-2">
+      <h2 id="name-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-definitions" class="section-name selfRef">Definitions</a>
+      </h2>
+<div id="defs-reqs">
+<section id="section-2.1">
+        <h3 id="name-requirements">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-requirements" class="section-name selfRef">Requirements</a>
+        </h3>
+<p id="section-2.1-1">
+          The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as described in BCP 14 <span>[<a href="#RFC2119" class="xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="xref">RFC8174</a>]</span> when, and only when, they
+          appear in all capitals, as shown here.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="defs-ws">
+<section id="section-2.2">
+        <h3 id="name-websocket">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-websocket" class="section-name selfRef">WebSocket</a>
+        </h3>
+<p id="section-2.2-1">
+          This document references the procedure to <em>Fail the WebSocket Connection</em>. This procedure is defined in <span><a href="https://rfc-editor.org/rfc/rfc6455#section-7.1.7" class="relref">Section 7.1.7</a> of [<a href="#RFC6455" class="xref">RFC6455</a>]</span>.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">
+          This document references the event that <em>The WebSocket Connection is Established</em> and the event that <em>A WebSocket Message Has Been Received</em>. These events are defined in Sections <a href="https://rfc-editor.org/rfc/rfc6455#section-4.1" class="relref">4.1</a> and <a href="https://rfc-editor.org/rfc/rfc6455#section-6.2" class="relref">6.2</a>, respectively, of <span>[<a href="#RFC6455" class="xref">RFC6455</a>]</span>.<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="defs-zstd">
+<section id="section-2.3">
+        <h3 id="name-zstandard">
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-zstandard" class="section-name selfRef">Zstandard</a>
+        </h3>
+<p id="section-2.3-1">
+          This document uses the terms <em>Zstd Frame</em>, <em>Zstd Skippable Frame</em>, and <em>Zstd Block</em> to refer respectively to the <em>Zstandard Frame</em> defined in Section <a href="https://rfc-editor.org/rfc/rfc8478#section-3.1.1" class="relref">3.1.1</a>, the <em>Skippable Frame</em> defined in Section <a href="https://rfc-editor.org/rfc/rfc8478#section-3.1.2" class="relref">3.1.2</a>, and the <em>Block</em> defined in Section <a href="https://rfc-editor.org/rfc/rfc8478#section-3.1.1.2" class="relref">3.1.1.2</a> of <span>[<a href="#RFC8478" class="xref">RFC8478</a>]</span>.<a href="#section-2.3-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="extension">
+<section id="section-3">
+      <h2 id="name-the-permessage-zstd-extensi">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-the-permessage-zstd-extensi" class="section-name selfRef">The <code>permessage-zstd</code> Extension</a>
+      </h2>
+<p id="section-3-1">
+        Four extension parameters are defined for <code>permessage-zstd</code> to help endpoints negotiate constraints on how much history will have to be retained in order to be able to decompress new messages.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ul>
+<li id="section-3-2.1">
+          <code>server_no_context_takeover</code><a href="#section-3-2.1" class="pilcrow">¶</a>
+</li>
+<li id="section-3-2.2">
+          <code>client_no_context_takeover</code><a href="#section-3-2.2" class="pilcrow">¶</a>
+</li>
+<li id="section-3-2.3">
+          <code>server_max_window_bits</code><a href="#section-3-2.3" class="pilcrow">¶</a>
+</li>
+<li id="section-3-2.4">
+          <code>client_max_window_bits</code><a href="#section-3-2.4" class="pilcrow">¶</a>
+</li>
+</ul>
+<p id="section-3-3">
+        Although both the context takeover and window size controls target the same broad goal of constraining history retention requirements, they do so in different ways. These two methods are independently useful.<a href="#section-3-3" class="pilcrow">¶</a></p>
+<p id="section-3-4">
+        <span class="cref">TODO</span><a href="#section-3-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extension-params">
+<section id="section-4">
+      <h2 id="name-extension-parameters">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-extension-parameters" class="section-name selfRef">Extension Parameters</a>
+      </h2>
+<p id="section-4-1">
+        <span class="cref">TODO</span><a href="#section-4-1" class="pilcrow">¶</a></p>
+<div id="extension-param-server-no-context-takeover">
+<section id="section-4.1">
+        <h3 id="name-server_no_context_takeover">
+<a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-server_no_context_takeover" class="section-name selfRef"><code>server_no_context_takeover</code></a>
+        </h3>
+<p id="section-4.1-1">
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <span><a href="https://rfc-editor.org/rfc/rfc7692#section-7.1.1.1" class="relref">Section 7.1.1.1</a> of [<a href="#RFC7692" class="xref">RFC7692</a>]</span>.<a href="#section-4.1-1" class="pilcrow">¶</a></p>
+<p id="section-4.1-2">
+          <span class="cref">TODO</span><a href="#section-4.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extension-param-client-no-context-takeover">
+<section id="section-4.2">
+        <h3 id="name-client_no_context_takeover">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-client_no_context_takeover" class="section-name selfRef"><code>client_no_context_takeover</code></a>
+        </h3>
+<p id="section-4.2-1">
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <span><a href="https://rfc-editor.org/rfc/rfc7692#section-7.1.1.2" class="relref">Section 7.1.1.2</a> of [<a href="#RFC7692" class="xref">RFC7692</a>]</span>.<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.2-2">
+          <span class="cref">TODO</span><a href="#section-4.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extension-param-server-max-window-bits">
+<section id="section-4.3">
+        <h3 id="name-server_max_window_bits">
+<a href="#section-4.3" class="section-number selfRef">4.3. </a><a href="#name-server_max_window_bits" class="section-name selfRef"><code>server_max_window_bits</code></a>
+        </h3>
+<p id="section-4.3-1">
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <span><a href="https://rfc-editor.org/rfc/rfc7692#section-7.1.2.1" class="relref">Section 7.1.2.1</a> of [<a href="#RFC7692" class="xref">RFC7692</a>]</span>, with the following exceptions:<a href="#section-4.3-1" class="pilcrow">¶</a></p>
+<ul>
+<li id="section-4.3-2.1">
+            The parameter's minimum value is 10 and its maximum value is 31.<a href="#section-4.3-2.1" class="pilcrow">¶</a>
+</li>
+<li id="section-4.3-2.2">
+            A server which receives this option <span class="bcp14">MUST</span> either decline the extension negotiation or accept the parameter.
+            <span class="cref">
+              I believe this is what the deflate extension intends to specify, but it's not 100% clear.
+            </span><a href="#section-4.3-2.2" class="pilcrow">¶</a>
+</li>
+</ul>
+<p id="section-4.3-3">
+          <span class="cref">TODO</span><a href="#section-4.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extension-param-client-max-window-bits">
+<section id="section-4.4">
+        <h3 id="name-client_max_window_bits">
+<a href="#section-4.4" class="section-number selfRef">4.4. </a><a href="#name-client_max_window_bits" class="section-name selfRef"><code>client_max_window_bits</code></a>
+        </h3>
+<p id="section-4.4-1">
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <span><a href="https://rfc-editor.org/rfc/rfc7692#section-7.1.2.2" class="relref">Section 7.1.2.2</a> of [<a href="#RFC7692" class="xref">RFC7692</a>]</span>, with the exception that the parameter's minimum value is 10 and the maximum value is 31.<a href="#section-4.4-1" class="pilcrow">¶</a></p>
+<p id="section-4.4-2">
+          <span class="cref">TODO</span><a href="#section-4.4-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extension-param-server-no-zstd-magic">
+<section id="section-4.5">
+        <h3 id="name-server_no_zstd_magic">
+<a href="#section-4.5" class="section-number selfRef">4.5. </a><a href="#name-server_no_zstd_magic" class="section-name selfRef"><code>server_no_zstd_magic</code></a>
+        </h3>
+<p id="section-4.5-1">
+          <em>Zstd Frames</em> normally begin with a fixed four byte prefix (hexadecimal <code>28 B5 2F FD</code>). This extension parameter signals that the server can and will...<a href="#section-4.5-1" class="pilcrow">¶</a></p>
+<p id="section-4.5-2">
+          <span class="cref">TODO</span><a href="#section-4.5-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="extension-param-client-no-zstd-magic">
+<section id="section-4.6">
+        <h3 id="name-client_no_zstd_magic">
+<a href="#section-4.6" class="section-number selfRef">4.6. </a><a href="#name-client_no_zstd_magic" class="section-name selfRef"><code>client_no_zstd_magic</code></a>
+        </h3>
+<p id="section-4.6-1"><a href="#section-4.6-1" class="pilcrow">¶</a></p>
+<p id="section-4.6-2">
+          <span class="cref">TODO</span><a href="#section-4.6-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="transformation">
+<section id="section-5">
+      <h2 id="name-message-transformation">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-message-transformation" class="section-name selfRef">Message Transformation</a>
+      </h2>
+<div id="encoding">
+<section id="section-5.1">
+        <h3 id="name-encoding">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-encoding" class="section-name selfRef">Encoding</a>
+        </h3>
+<p id="section-5.1-1">
+          A sender using the <code>permessage-zstd</code> extension encodes a message by performing Zstandard compression on the payload of the message. The resulting encoded message is subject to the following constraints:<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">
+          The concatenation of all compressed message payloads sent by a peer over the lifetime of the WebSocket connection <span class="bcp14">MUST</span> form a sequence of zero or more <em>Zstd Frames</em> and <em>Zstd Skippable Frames</em>.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">
+          Sometimes, as described in <a href="#encoding-dependent-payloads" class="xref">Section 5.1.3.1</a>, a single <em>Zstd Frame</em> can be held open across messages and used to compress their contents in a single stream. Even when in this mode, each encoded message payload <span class="bcp14">MUST</span> represent exactly the content of the message payload it encodes. That is, a <em>Zstd Frame</em> that is held open <span class="bcp14">MUST</span> nonetheless be flushed at every message payload boundary.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.1-4">
+          Note: an empty output is a valid representation of an empty input.<a href="#section-5.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.1-5">
+          The specific configuration of Zstandard for this compression is partially defined by the extension parameters defined in <a href="#extension-params" class="xref">Section 4</a>.<a href="#section-5.1-5" class="pilcrow">¶</a></p>
+<p id="section-5.1-6">
+          <span class="cref">TODO</span><a href="#section-5.1-6" class="pilcrow">¶</a></p>
+<div id="encoding-fragments">
+<section id="section-5.1.1">
+          <h4 id="name-fragmentation">
+<a href="#section-5.1.1" class="section-number selfRef">5.1.1. </a><a href="#name-fragmentation" class="section-name selfRef">Fragmentation</a>
+          </h4>
+<p id="section-5.1.1-1">
+            Encoded message payloads <span class="bcp14">MAY</span> be arbitrarily fragmented by the WebSocket transport. As an <span class="bcp14">OPTIONAL</span> optimization, implementations <span class="bcp14">MAY</span> align <em>Zstd Block</em> boundaries with WebSocket Fragment boundaries.<a href="#section-5.1.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="encoding-window">
+<section id="section-5.1.2">
+          <h4 id="name-window">
+<a href="#section-5.1.2" class="section-number selfRef">5.1.2. </a><a href="#name-window" class="section-name selfRef">Window</a>
+          </h4>
+<p id="section-5.1.2-1">
+            <span class="cref">The <em>Sending Window Size</em> is controls the amount of memory required to compress and decompress a stream of messages. For servers, their <em>Sending Window Size</em> an internal parameter  by each peer. For servers, if the  from the connection's <code>agreed parameters</code> set. The server's <em>Window Size</em> is </span><a href="#section-5.1.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.1.2-2">
+            In the absence of negotiation, to aid interoperability, it is <span class="bcp14">RECOMMENDED</span> that sender's use a <em>Window Size</em> no larger than 8 MB.<a href="#section-5.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-5.1.2-3">
+            Note that although the <code>permessage-zstd</code> extension negotiates compression in both directions simultaneously, once negotiated, the encoding of messages sent in one direction is independent of messages sent in the other. That is, the stream history used as context in the compression of a message is the ordered concatenation of encoded messages sent in that same direction, not all messages sent in the WebSocket connection.<a href="#section-5.1.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="encoding-dependency">
+<section id="section-5.1.3">
+          <h4 id="name-inter-payload-dependencies">
+<a href="#section-5.1.3" class="section-number selfRef">5.1.3. </a><a href="#name-inter-payload-dependencies" class="section-name selfRef">Inter-Payload Dependencies</a>
+          </h4>
+<div id="encoding-dependent-payloads">
+<section id="section-5.1.3.1">
+            <h5 id="name-dependent-payloads">
+<a href="#section-5.1.3.1" class="section-number selfRef">5.1.3.1. </a><a href="#name-dependent-payloads" class="section-name selfRef">Dependent Payloads</a>
+            </h5>
+<p id="section-5.1.3.1-1">
+              Since <em>Zstd Frames</em> are independent of one another, a sender that wishes to emit payloads that exploit the stream's history must hold a <em>Zstd Frame</em> open between WebSocket payloads.<a href="#section-5.1.3.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1.3.1-2">
+              In this mode, the sender <span class="bcp14">MAY</span> end a <em>Zstd Frame</em> (and subsequently begin another) at any time. (However, the <em>Zstd Frame Header</em> <span class="bcp14">SHOULD NOT</span> be split between payloads or fragments. <span class="cref">Should this be a requirement?</span>) Each encoded WebSocket message payload <span class="bcp14">MUST</span> instead begin and end at a <em>Zstd Block</em> boundary. That is, in <em>independent payloads</em> mode, neither <em>Zstd Frames</em> nor <em>Zstd Blocks</em> can be split between WebSocket payloads. When not in <em>independent payloads</em> mode, <em>Zstd Frames</em> can be split, but <em>Zstd Blocks</em> still must not be.<a href="#section-5.1.3.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1.3.1-3">
+              Messages that are sent un-encoded (with <code>Per-Message Compressed</code> bit equal to 0) do not participate in the context history used to compress subsequent messages.<a href="#section-5.1.3.1-3" class="pilcrow">¶</a></p>
+<div id="encoding-dependent-payloads-example">
+<section id="section-5.1.3.1.1">
+              <h6 id="name-example">
+<a href="#section-5.1.3.1.1" class="section-number selfRef">5.1.3.1.1. </a><a href="#name-example" class="section-name selfRef">Example</a>
+              </h6>
+<p id="section-5.1.3.1.1-1">
+                <span class="cref">TODO</span><a href="#section-5.1.3.1.1-1" class="pilcrow">¶</a></p>
+<div class="artwork art-text alignLeft" id="section-5.1.3.1.1-2">
+<pre>
+  WebSocket Payloads:  [......][..........][............]
+  WebSocket Frames:    [......][....][....][.....][.....]
+  WebSocket Fragments: [..][..][.][.][....][..][.][.....]
+  Zstd Frames:         [..........][....................]
+  Zstd Blocks:         [..][..][..][..][..][..][..][..][]
+</pre><a href="#section-5.1.3.1.1-2" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="encoding-independent-payloads">
+<section id="section-5.1.3.2">
+            <h5 id="name-independent-payloads">
+<a href="#section-5.1.3.2" class="section-number selfRef">5.1.3.2. </a><a href="#name-independent-payloads" class="section-name selfRef">Independent Payloads</a>
+            </h5>
+<p id="section-5.1.3.2-1">
+              A server <span class="bcp14">MUST</span> produce <em>independent payloads</em> if the <code>agreed parameters</code> contain the <code>server_no_context_takeover</code> option. Otherwise, a server <span class="bcp14">MAY</span> produce <em>independent payloads</em>.<a href="#section-5.1.3.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.1.3.2-2">
+              A client <span class="bcp14">MUST</span> produce <em>independent payloads</em> if the <code>agreed parameters</code> contain the <code>client_no_context_takeover</code> option. Otherwise, a client <span class="bcp14">MAY</span> produce <em>independent payloads</em>.<a href="#section-5.1.3.2-2" class="pilcrow">¶</a></p>
+<p id="section-5.1.3.2-3">
+              When producing an <em>independent payload</em>, each encoded message payload <span class="bcp14">MUST</span> be composed of zero or more complete <em>Zstd Frames</em> or <em>Zstd Skippable Frames</em>.<a href="#section-5.1.3.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.1.3.2-4">
+              The constraints imposed by the negotiated window size still apply.<a href="#section-5.1.3.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="encoding-magic">
+<section id="section-5.1.4">
+          <h4 id="name-magic-less-frames">
+<a href="#section-5.1.4" class="section-number selfRef">5.1.4. </a><a href="#name-magic-less-frames" class="section-name selfRef">Magic-Less Frames</a>
+          </h4>
+<p id="section-5.1.4-1">
+            If the <code>server_no_zstd_magic</code> option appears in the <code>agreed parameters</code> set for a connection, a server <span class="bcp14">MUST</span> produce <em>magic-less frames</em>, otherwise the server <span class="bcp14">MUST NOT</span> produce <em>magic-less frames</em>.<a href="#section-5.1.4-1" class="pilcrow">¶</a></p>
+<p id="section-5.1.4-2">
+            If the <code>client_no_zstd_magic</code> option appears in the <code>agreed parameters</code> set for a connection, a client <span class="bcp14">MUST</span> produce <em>magic-less frames</em>, otherwise the client <span class="bcp14">MUST NOT</span> produce <em>magic-less frames</em>.<a href="#section-5.1.4-2" class="pilcrow">¶</a></p>
+<p id="section-5.1.4-3">
+            If a sender has negotiated the use of <em>magic-less frames</em>,
+            the first four bytes of a <em>Zstd Frame</em> are stripped. Without this identifier, it is no longer possible to distinguish <em>Zstd Frames</em> and <em>Zstd Skippable Frames</em>. For this reason, when producing <em>magic-less frames</em>, a sender <span class="bcp14">MUST NOT</span> emit <em>Zstd Skippable Frames</em>.<a href="#section-5.1.4-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="decoding">
+<section id="section-5.2">
+        <h3 id="name-decoding">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-decoding" class="section-name selfRef">Decoding</a>
+        </h3>
+<p id="section-5.2-1">
+          <span class="cref">TODO</span><a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">
+          A decoder <span class="bcp14">MUST</span> accept compressed payloads comprised of multiple <em>Zstd Frames</em>.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<div id="decoding-window">
+<section id="section-5.2.1">
+          <h4 id="name-window-2">
+<a href="#section-5.2.1" class="section-number selfRef">5.2.1. </a><a href="#name-window-2" class="section-name selfRef">Window</a>
+          </h4>
+<p id="section-5.2.1-1">
+            The <em>Window Size</em><a href="#section-5.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.2.1-2">
+            If a peer is unwilling to receive content with an arbitrarily large <em>Window Size</em> (in particular, up to 8 MB), the peer <span class="bcp14">SHOULD</span> send an appropriate <code>server_max_window_bits</code> or <code>client_max_window_bits</code> parameter during connection negotiation.<a href="#section-5.2.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.2.1-3">
+            The <em>Required Window</em> of a <em>Zstd Frame</em>, which describes how much memory must be allocated to be able to decompress the frame, is the <em>Window_Size</em> derived from the frame's <em>Window_Descriptor</em> (<span><a href="https://rfc-editor.org/rfc/rfc8478#section-3.1.1.1.2" class="relref">Section 3.1.1.1.2</a> of [<a href="#RFC8478" class="xref">RFC8478</a>]</span>) if the <em>Single_Segment_Flag</em> (<span><a href="https://rfc-editor.org/rfc/rfc8478#section-3.1.1.1.1.2" class="relref">Section 3.1.1.1.1.2</a> of [<a href="#RFC8478" class="xref">RFC8478</a>]</span>) is unset, or the <em>Frame_Content_Size</em> (<span><a href="https://rfc-editor.org/rfc/rfc8478#section-3.1.1.1.1.1" class="relref">Section 3.1.1.1.1.1</a> of [<a href="#RFC8478" class="xref">RFC8478</a>]</span>) if the <em>Single_Segment_Flag</em> is set.<a href="#section-5.2.1-3" class="pilcrow">¶</a></p>
+<p id="section-5.2.1-4">
+            If a peer receives a <em>Zstd Frame</em> whose <em>Required Window</em> is larger than the <em>Window Size</em> negotiated for the sender, the peer <span class="bcp14">SHOULD</span> <em>Fail the WebSocket Connection</em>.<a href="#section-5.2.1-4" class="pilcrow">¶</a></p>
+<p id="section-5.2.1-5">
+            Otherwise, if no <em>Window Size</em> was negotiated, and a peer receives a <em>Zstd Frame</em> whose <em>Required Window</em> is larger than they are willing to handle, the peer <span class="bcp14">MAY</span> <em>Fail the WebSocket Connection</em>.<a href="#section-5.2.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="decoding-magic">
+<section id="section-5.2.2">
+          <h4 id="name-magic-less-frames-2">
+<a href="#section-5.2.2" class="section-number selfRef">5.2.2. </a><a href="#name-magic-less-frames-2" class="section-name selfRef">Magic-Less Frames</a>
+          </h4>
+<p id="section-5.2.2-1">
+            If a receiver has negotiated the use of <em>magic-less frames</em>,
+            every frame is assumed to be a <em>Zstd Frame</em><a href="#section-5.2.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="differences">
+<section id="section-6">
+      <h2 id="name-differences-from-permessage">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-differences-from-permessage" class="section-name selfRef">Differences from <code>permessage-deflate</code></a>
+      </h2>
+<p id="section-6-1">
+        Note: this section is <strong>non-normative</strong>.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<ul>
+<li id="section-6-2.1">
+          The <code>server_max_window_bits</code> and <code>client_max_window_bits</code> parameters have a different range of valid values (10 to 31, rather than 8 to 15).<a href="#section-6-2.1" class="pilcrow">¶</a>
+</li>
+<li id="section-6-2.2">
+          The <code>permessage-deflate</code> extension (like its corresponding HTTP Content-Coding, defined in <span><a href="https://rfc-editor.org/rfc/rfc7230#section-4.2.2" class="relref">Section 4.2.2</a> of [<a href="#RFC7230" class="xref">RFC7230</a>]</span>) requires the use of a single deflate frame, which is divided into blocks. In contrast, this extension (like its corresponding HTTP Content-Coding, defined in <span><a href="https://rfc-editor.org/rfc/rfc8478#section-6.2" class="relref">Section 6.2</a> of [<a href="#RFC8478" class="xref">RFC8478</a>]</span>) permits the use of many <em>Zstd Frames</em> over the lifetime of a connection.<a href="#section-6-2.2" class="pilcrow">¶</a>
+</li>
+<li id="section-6-2.3">
+          No truncation of the output produced by the underlying compressor is performed by the encoder. Similarly, no static suffix is added by the decoder to the compressed payload before being passed to the underlying compressor to be decompressed.<a href="#section-6-2.3" class="pilcrow">¶</a>
+</li>
+</ul>
+</section>
+</div>
+<div id="iana">
+<section id="section-7">
+      <h2 id="name-iana-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="iana-websocket-extension-registry">
+<section id="section-7.1">
+        <h3 id="name-websocket-extension-name">
+<a href="#section-7.1" class="section-number selfRef">7.1. </a><a href="#name-websocket-extension-name" class="section-name selfRef">WebSocket Extension Name</a>
+        </h3>
+<p id="section-7.1-1">
+          IANA is requested to register the following WebSocket extension name in the "WebSocket Extension Name Registry" defined in <span>[<a href="#RFC6455" class="xref">RFC6455</a>]</span>.<a href="#section-7.1-1" class="pilcrow">¶</a></p>
+<dl class="dlParallel" id="section-7.1-2">
+          <dt id="section-7.1-2.1">Extension Identifier:</dt>
+<dd id="section-7.1-2.2">
+            <code>permessage-zstd</code><a href="#section-7.1-2.2" class="pilcrow">¶</a>
+</dd>
+<dd class="break"></dd>
+<dt id="section-7.1-2.3">Extension Common Name:</dt>
+<dd id="section-7.1-2.4">WebSocket Per-Message Compression using Zstandard<a href="#section-7.1-2.4" class="pilcrow">¶</a>
+</dd>
+<dd class="break"></dd>
+<dt id="section-7.1-2.5">Extension Definition:</dt>
+<dd id="section-7.1-2.6">This document<a href="#section-7.1-2.6" class="pilcrow">¶</a>
+</dd>
+<dd class="break"></dd>
+<dt id="section-7.1-2.7">Known Incompatible Extensions:</dt>
+<dd id="section-7.1-2.8">None<a href="#section-7.1-2.8" class="pilcrow">¶</a>
+</dd>
+<dd class="break"></dd>
+</dl>
+<p id="section-7.1-3">
+          The <code>permessage-zstd</code> extension name is used in the <code>Sec-WebSocket-Extensions</code> header in the WebSocket opening handshake to negotiate use of the <code>permessage-zstd</code> extension.<a href="#section-7.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security">
+<section id="section-8">
+      <h2 id="name-security-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-8-1">
+        <span class="cref">TODO</span><a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">
+        <span>[<a href="#CRIME" class="xref">CRIME</a>]</span>
+        <span>[<a href="#DICT-SEC" class="xref">DICT-SEC</a>]</span><a href="#section-8-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="future-work">
+<section id="section-9">
+      <h2 id="name-future-work">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-future-work" class="section-name selfRef">Future Work</a>
+      </h2>
+<p id="section-9-1">
+        <span class="cref">TODO</span><a href="#section-9-1" class="pilcrow">¶</a></p>
+<div id="future-work-independent-negotiation">
+<section id="section-9.1">
+        <h3 id="name-independent-negotiation-for">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-independent-negotiation-for" class="section-name selfRef">Independent Negotiation for Each Direction</a>
+        </h3>
+<p id="section-9.1-1">
+          <span class="cref">TODO</span><a href="#section-9.1-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="future-work-dictionaries">
+<section id="section-9.2">
+        <h3 id="name-dictionaries">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-dictionaries" class="section-name selfRef">Dictionaries</a>
+        </h3>
+<p id="section-9.2-1">
+          <span class="cref">TODO</span><a href="#section-9.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<section id="section-10">
+      <h2 id="name-references">
+<a href="#section-10" class="section-number selfRef">10. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<section id="section-10.1">
+        <h3 id="name-normative-references">
+<a href="#section-10.1" class="section-number selfRef">10.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+<dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc2119">https://www.rfc-editor.org/info/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6455">[RFC6455]</dt>
+<dd>
+<span class="refAuthor">Fette, I.</span><span class="refAuthor"> and A. Melnikov</span>, <span class="refTitle">"The WebSocket Protocol"</span>, <span class="seriesInfo">RFC 6455</span>, <span class="seriesInfo">DOI 10.17487/RFC6455</span>, <time datetime="2011-12">December 2011</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc6455">https://www.rfc-editor.org/info/rfc6455</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7692">[RFC7692]</dt>
+<dd>
+<span class="refAuthor">Yoshino, T.</span>, <span class="refTitle">"Compression Extensions for WebSocket"</span>, <span class="seriesInfo">RFC 7692</span>, <span class="seriesInfo">DOI 10.17487/RFC7692</span>, <time datetime="2015-12">December 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7692">https://www.rfc-editor.org/info/rfc7692</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+<dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8174">https://www.rfc-editor.org/info/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8478">[RFC8478]</dt>
+<dd>
+<span class="refAuthor">Collet, Y.</span><span class="refAuthor"> and M. Kucherawy, Ed.</span>, <span class="refTitle">"Zstandard Compression and the application/zstd Media Type"</span>, <span class="seriesInfo">RFC 8478</span>, <span class="seriesInfo">DOI 10.17487/RFC8478</span>, <time datetime="2018-10">October 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc8478">https://www.rfc-editor.org/info/rfc8478</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+<section id="section-10.2">
+        <h3 id="name-informative-references">
+<a href="#section-10.2" class="section-number selfRef">10.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="CRIME">[CRIME]</dt>
+<dd>
+<span class="refAuthor">Rizzo, J.</span><span class="refAuthor"> and T. Duong</span>, <span class="refTitle">"Compression Ratio Info-leak Made Easy"</span>, <time datetime="2012">2012</time>, <span>&lt;<a href="https://www.ekoparty.org/archive/2012/CRIME_ekoparty2012.pdf">https://www.ekoparty.org/archive/2012/CRIME_ekoparty2012.pdf</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="DICT-SEC">[DICT-SEC]</dt>
+<dd>
+<span class="refAuthor">Handte, W. F. P.</span>, <span class="refTitle">"Security Considerations Regarding Compression Dictionaries"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-handte-httpbis-dict-sec</span>, <time datetime="2019-10">October 2019</time>, <span>&lt;<a href="https://tools.ietf.org/html/draft-handte-httpbis-dict-sec">https://tools.ietf.org/html/draft-handte-httpbis-dict-sec</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7230">[RFC7230]</dt>
+<dd>
+<span class="refAuthor">Fielding, R., Ed.</span><span class="refAuthor"> and J. Reschke, Ed.</span>, <span class="refTitle">"Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing"</span>, <span class="seriesInfo">RFC 7230</span>, <span class="seriesInfo">DOI 10.17487/RFC7230</span>, <time datetime="2014-06">June 2014</time>, <span>&lt;<a href="https://www.rfc-editor.org/info/rfc7230">https://www.rfc-editor.org/info/rfc7230</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</section>
+<div id="authors-addresses">
+<section id="section-appendix.a">
+      <h2 id="name-authors-addresses">
+<a href="#name-authors-addresses" class="section-name selfRef">Authors' Addresses</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">W. Felix P. Handte</span></div>
+<div dir="auto" class="left"><span class="org">Facebook, Inc.</span></div>
+<div dir="auto" class="left"><span class="street-address">770 Broadway</span></div>
+<div dir="auto" class="left">
+<span class="locality">New York</span>, <span class="region">NY</span> <span class="postal-code">10003</span>
+</div>
+<div dir="auto" class="left"><span class="country-name">United States of America</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:w@felixhandte.com" class="email">w@felixhandte.com</a>
+</div>
+</address>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Felipe Gasper</span></div>
+<div dir="auto" class="left"><span class="org">[TODO]</span></div>
+<div dir="auto" class="left"><span class="street-address">[TODO]</span></div>
+<div dir="auto" class="left"><span class="locality">[TODO]</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:felipe@felipegasper.com" class="email">felipe@felipegasper.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
