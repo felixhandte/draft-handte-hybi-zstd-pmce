@@ -70,16 +70,11 @@
       </t>
     </abstract>
 
-    <note>
+    <note removeInRFC="true">
       <name>Draft Development</name>
-      <t>
-        <cref>RFC Editor: Please remove this section before publication.</cref>
-      </t>
+      <!-- RFC Editor: Please remove this section before publication. -->
       <t>
         The source code and issues list for this draft can be found at <eref target="https://github.com/felixhandte/draft-handte-hybi-zstd-pcme"/>.
-      </t>
-      <t>
-        Discussion of this draft takes place on the BiDirectional or Server-Initiated working group mailing list (<eref target="mailto:hybi@ietf.org"/>), which is archived at <eref target="https://mailarchive.ietf.org/arch/browse/hybi/"/>.
       </t>
     </note>
   </front>
@@ -100,7 +95,8 @@
       <section anchor="defs-reqs">
         <name>Requirements</name>
         <t>
-          The key words "<bcp14>MUST</bcp14>", "<bcp14>MUST NOT</bcp14>", "<bcp14>REQUIRED</bcp14>", "<bcp14>SHALL</bcp14>", "<bcp14>SHALL NOT</bcp14>", "<bcp14>SHOULD</bcp14>", "<bcp14>SHOULD NOT</bcp14>", "<bcp14>RECOMMENDED</bcp14>", "<bcp14>MAY</bcp14>", and "<bcp14>OPTIONAL</bcp14>" in this document are to be interpreted as described in <xref target="RFC2119"/>.
+          The key words "<bcp14>MUST</bcp14>", "<bcp14>MUST NOT</bcp14>", "<bcp14>REQUIRED</bcp14>", "<bcp14>SHALL</bcp14>", "<bcp14>SHALL NOT</bcp14>", "<bcp14>SHOULD</bcp14>", "<bcp14>SHOULD NOT</bcp14>", "<bcp14>RECOMMENDED</bcp14>", "<bcp14>MAY</bcp14>", and "<bcp14>OPTIONAL</bcp14>" in this document are to be interpreted as described in BCP 14 <xref target="RFC2119"/> <xref target="RFC8174"/> when, and only when, they
+          appear in all capitals, as shown here.
         </t>
       </section>
       <section anchor="defs-ws">
@@ -115,7 +111,7 @@
       <section anchor="defs-zstd">
         <name>Zstandard</name>
         <t>
-          This document uses the terms <em>Zstd Frame</em> and <em>Zstd Block</em> to refer respectively to the <em>frame</em> defined in Section <relref section="3.1" target="RFC8478" displayFormat="bare"/> and the <em>block</em> defined in Section <relref section="3.1.1.2" target="RFC8478" displayFormat="bare"/> of <xref target="RFC8478"/>.
+          This document uses the terms <em>Zstd Frame</em>, <em>Zstd Skippable Frame</em>, and <em>Zstd Block</em> to refer respectively to the <em>Zstandard Frame</em> defined in Section <relref section="3.1.1" target="RFC8478" displayFormat="bare"/>, the <em>Skippable Frame</em> defined in Section <relref section="3.1.2" target="RFC8478" displayFormat="bare"/>, and the <em>Block</em> defined in Section <relref section="3.1.1.2" target="RFC8478" displayFormat="bare"/> of <xref target="RFC8478"/>.
         </t>
       </section>
     </section>
@@ -137,96 +133,6 @@
       <t>
         <cref>TODO</cref>
       </t>
-    </section>
-
-    <section anchor="transformation">
-      <name>Message Transformation</name>
-      <section anchor="encoding">
-        <name>Encoding</name>
-        <t>
-          A sender using the <tt>permessage-zstd</tt> extension encodes a message by performing Zstandard compression on the payload of the message.
-        </t>
-        <t>
-          The concatenation of all compressed message payloads sent by a peer over the lifetime of the WebSocket connection <bcp14>MUST</bcp14> form a sequence of zero or more <em>Zstd Frames</em> or <em>Zstd Skippable Frames</em>.
-        </t>
-        <t>
-          An empty output is a valid representation of an empty input.
-        </t>
-        <t>
-          The specific configuration of Zstandard for this compression is partially defined by the extension parameters defined in <xref target="extension-params"/>.
-        </t>
-        <t>
-          Although the <tt>permessage-zstd</tt> extension negotiates compression in both directions simultaneously, once negotiated, the encoding of messages sent in one direction is independent of messages sent in the other. That is, the stream history used as context in the compression of a message is the ordered concatenation of encoded messages sent in that same direction, not all messages sent in the WebSocket connection.
-        </t>
-        <t>
-          Messages that are sent un-encoded (with <tt>Per-Message Compressed</tt> bit equal to 0) do not participate in the context history used to compress subsequent messages.
-        </t>
-        <t>
-          <cref>TODO</cref>
-        </t>
-        <section anchor="encoding-independent-payloads">
-          <name>Independent Payloads</name>
-          <t>
-            A server <bcp14>MUST</bcp14> produce <em>independent payloads</em> if the <tt>agreed parameters</tt> contain the <tt>server_no_context_takeover</tt> option. Otherwise, a server <bcp14>MAY</bcp14> produce <em>independent payloads</em>.
-          </t>
-          <t>
-            A client <bcp14>MUST</bcp14> produce <em>independent payloads</em> if the <tt>agreed parameters</tt> contain the <tt>client_no_context_takeover</tt> option. Otherwise, a client <bcp14>MAY</bcp14> produce <em>independent payloads</em>.
-          </t>
-          <t>
-            When producing an <em>independent payload</em>, each encoded message payload <bcp14>MUST</bcp14> be composed of zero or more complete <em>Zstd Frames</em> or <em>Zstd Skippable Frames</em>.
-          </t>
-        </section>
-        <section anchor="encoding-dependent-payloads">
-          <name>Dependent Payloads</name>
-          <t>
-            Since <em>Zstd Frames</em> are independent of one another, a sender that wishes to emit payloads that exploit the context of the stream's history must hold a single <em>Zstd Frame</em> open between WebSocket payloads.
-          </t>
-          <t>
-            In this mode, the sender <bcp14>MAY</bcp14> end a <em>Zstd Frame</em> (and subsequently begin another) at any time. Each encoded WebSocket message payload <bcp14>MUST</bcp14> instead begin and end at a <em>Zstd Block</em> boundary. That is, in <em>independent payloads</em> mode, neither <em>Zstd Frames</em> nor <em>Zstd Blocks</em> can be split between WebSocket payloads. When not in <em>independent payloads</em> mode, <em>Zstd Frames</em> can be split, but <em>Zstd Blocks</em> still must not be.
-          </t>
-          <section anchor="encoding-dependent-payloads-example">
-            <name>Example</name>
-            <t>
-              <cref>TODO</cref>
-            </t>
-            <artwork>
-WebSocket Payloads: [......][..........][............]
-WebSocket Frames:   [......][....][....][.....][.....]
-Zstd Frames:        [..........][....................]
-Zstd Blocks:        [..][..][..][..][..][..][..][..][]
-            </artwork>
-          </section>
-        </section>
-        <section anchor="encoding-magic">
-          <name>Magic-Less Frames</name>
-          <t>
-            If the <tt>server_no_zstd_magic</tt> option appears in the <tt>agreed parameters</tt> set for a connection, a server <bcp14>MUST</bcp14> produce <em>magic-less frames</em>, otherwise the server <bcp14>MUST NOT</bcp14> produce <em>magic-less frames</em>.
-          </t>
-          <t>
-            If the <tt>client_no_zstd_magic</tt> option appears in the <tt>agreed parameters</tt> set for a connection, a client <bcp14>MUST</bcp14> produce <em>magic-less frames</em>, otherwise the client <bcp14>MUST NOT</bcp14> produce <em>magic-less frames</em>.
-          </t>
-          <t>
-            If a sender has negotiated the use of <em>magic-less frames</em>,
-            the first four bytes of a <em>Zstd Frame</em> are stripped. Without this identifier, it is no longer possible to distinguish <em>Zstd Frames</em> and <em>Zstd Skippable Frames</em>. For this reason, when producing <em>magic-less frames</em>, a sender <bcp14>MUST NOT</bcp14> emit <em>Zstd Skippable Frames</em>.
-          </t>
-        </section>
-      </section>
-      <section anchor="decompression">
-        <name>Decoding</name>
-        <t>
-          <cref>TODO</cref>
-        </t>
-        <t>
-          A decoder <bcp14>MUST</bcp14> accept compressed payloads comprised of multiple <em>Zstd Frames</em>, even if the
-        </t>
-        <section anchor="decoding-magic">
-          <name>Magic-Less Frames</name>
-          <t>
-            If a receiver has negotiated the use of <em>magic-less frames</em>,
-            every frame is assumed to be a <em>Zstd Frame</em>
-          </t>
-        </section>
-      </section>
     </section>
 
     <section anchor="extension-params">
@@ -255,8 +161,19 @@ Zstd Blocks:        [..][..][..][..][..][..][..][..][]
       <section anchor="extension-param-server-max-window-bits">
         <name><tt>server_max_window_bits</tt></name>
         <t>
-          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <relref section="7.1.2.1" target="RFC7692"/>, with the exception that the parameter's minimum value is 10 and the maximum value is 31.
+          This option has the same semantics, behavior, and requirements as the parameter of the same name defined in <relref section="7.1.2.1" target="RFC7692"/>, with the following exceptions:
         </t>
+        <ul>
+          <li>
+            The parameter's minimum value is 10 and its maximum value is 31.
+          </li>
+          <li>
+            A server which receives this option <bcp14>MUST</bcp14> either decline the extension negotiation or accept the parameter.
+            <cref>
+              I believe this is what the deflate extension intends to specify, but it's not 100% clear.
+            </cref>
+          </li>
+        </ul>
         <t>
           <cref>TODO</cref>
         </t>
@@ -273,7 +190,7 @@ Zstd Blocks:        [..][..][..][..][..][..][..][..][]
       <section anchor="extension-param-server-no-zstd-magic">
         <name><tt>server_no_zstd_magic</tt></name>
         <t>
-          <em>Zstd Frames</em> normally begin with a fixed four byte prefix (hexadecimal <tt>28 B5 2F FD</tt>). This extension parameter signals that the server can and will.
+          <em>Zstd Frames</em> normally begin with a fixed four byte prefix (hexadecimal <tt>28 B5 2F FD</tt>). This extension parameter signals that the server can and will...
         </t>
         <t>
           <cref>TODO</cref>
@@ -287,6 +204,140 @@ Zstd Blocks:        [..][..][..][..][..][..][..][..][]
         <t>
           <cref>TODO</cref>
         </t>
+      </section>
+    </section>
+
+    <section anchor="transformation">
+      <name>Message Transformation</name>
+      <section anchor="encoding">
+        <name>Encoding</name>
+        <t>
+          A sender using the <tt>permessage-zstd</tt> extension encodes a message by performing Zstandard compression on the payload of the message. The resulting encoded message is subject to the following constraints:
+        </t>
+        <t>
+          The concatenation of all compressed message payloads sent by a peer over the lifetime of the WebSocket connection <bcp14>MUST</bcp14> form a sequence of zero or more <em>Zstd Frames</em> and <em>Zstd Skippable Frames</em>.
+        </t>
+        <t>
+          Sometimes, as described in <xref target="encoding-dependent-payloads"/>, a single <em>Zstd Frame</em> can be held open across messages and used to compress their contents in a single stream. Even when in this mode, each encoded message payload <bcp14>MUST</bcp14> represent exactly the content of the message payload it encodes. That is, a <em>Zstd Frame</em> that is held open <bcp14>MUST</bcp14> nonetheless be flushed at every message payload boundary.
+        </t>
+        <t>
+          Note: an empty output is a valid representation of an empty input.
+        </t>
+        <t>
+          The specific configuration of Zstandard for this compression is partially defined by the extension parameters defined in <xref target="extension-params"/>.
+        </t>
+        <t>
+          <cref>TODO</cref>
+        </t>
+        <section anchor="encoding-fragments">
+          <name>Fragmentation</name>
+          <t>
+            Encoded message payloads <bcp14>MAY</bcp14> be arbitrarily fragmented by the WebSocket transport. As an <bcp14>OPTIONAL</bcp14> optimization, implementations <bcp14>MAY</bcp14> align <em>Zstd Block</em> boundaries with WebSocket Fragment boundaries.
+          </t>
+        </section>
+        <section anchor="encoding-window">
+          <name>Window</name>
+          <t>
+            <cref>The <em>Sending Window Size</em> is controls the amount of memory required to compress and decompress a stream of messages. For servers, their <em>Sending Window Size</em> an internal parameter  by each peer. For servers, if the  from the connection's <tt>agreed parameters</tt> set. The server's <em>Window Size</em> is </cref>
+          </t>
+          <t>
+            In the absence of negotiation, to aid interoperability, it is <bcp14>RECOMMENDED</bcp14> that sender's use a <em>Window Size</em> no larger than 8 MB.
+          </t>
+          <t>
+            Note that although the <tt>permessage-zstd</tt> extension negotiates compression in both directions simultaneously, once negotiated, the encoding of messages sent in one direction is independent of messages sent in the other. That is, the stream history used as context in the compression of a message is the ordered concatenation of encoded messages sent in that same direction, not all messages sent in the WebSocket connection.
+          </t>
+        </section>
+        <section anchor="encoding-dependency">
+          <name>Inter-Payload Dependencies</name>
+          <section anchor="encoding-dependent-payloads">
+            <name>Dependent Payloads</name>
+            <t>
+              Since <em>Zstd Frames</em> are independent of one another, a sender that wishes to emit payloads that exploit the stream's history must hold a <em>Zstd Frame</em> open between WebSocket payloads.
+            </t>
+            <t>
+              In this mode, the sender <bcp14>MAY</bcp14> end a <em>Zstd Frame</em> (and subsequently begin another) at any time. (However, the <em>Zstd Frame Header</em> <bcp14>SHOULD NOT</bcp14> be split between payloads or fragments. <cref>Should this be a requirement?</cref>) Each encoded WebSocket message payload <bcp14>MUST</bcp14> instead begin and end at a <em>Zstd Block</em> boundary. That is, in <em>independent payloads</em> mode, neither <em>Zstd Frames</em> nor <em>Zstd Blocks</em> can be split between WebSocket payloads. When not in <em>independent payloads</em> mode, <em>Zstd Frames</em> can be split, but <em>Zstd Blocks</em> still must not be.
+            </t>
+            <t>
+              Messages that are sent un-encoded (with <tt>Per-Message Compressed</tt> bit equal to 0) do not participate in the context history used to compress subsequent messages.
+            </t>
+            <section anchor="encoding-dependent-payloads-example">
+              <name>Example</name>
+              <t>
+                <cref>TODO</cref>
+              </t>
+              <artwork>
+  WebSocket Payloads:  [......][..........][............]
+  WebSocket Frames:    [......][....][....][.....][.....]
+  WebSocket Fragments: [..][..][.][.][....][..][.][.....]
+  Zstd Frames:         [..........][....................]
+  Zstd Blocks:         [..][..][..][..][..][..][..][..][]
+              </artwork>
+            </section>
+          </section>
+          <section anchor="encoding-independent-payloads">
+            <name>Independent Payloads</name>
+            <t>
+              A server <bcp14>MUST</bcp14> produce <em>independent payloads</em> if the <tt>agreed parameters</tt> contain the <tt>server_no_context_takeover</tt> option. Otherwise, a server <bcp14>MAY</bcp14> produce <em>independent payloads</em>.
+            </t>
+            <t>
+              A client <bcp14>MUST</bcp14> produce <em>independent payloads</em> if the <tt>agreed parameters</tt> contain the <tt>client_no_context_takeover</tt> option. Otherwise, a client <bcp14>MAY</bcp14> produce <em>independent payloads</em>.
+            </t>
+            <t>
+              When producing an <em>independent payload</em>, each encoded message payload <bcp14>MUST</bcp14> be composed of zero or more complete <em>Zstd Frames</em> or <em>Zstd Skippable Frames</em>.
+            </t>
+            <t>
+              The constraints imposed by the negotiated window size still apply.
+            </t>
+          </section>
+        </section>
+        <section anchor="encoding-magic">
+          <name>Magic-Less Frames</name>
+          <t>
+            If the <tt>server_no_zstd_magic</tt> option appears in the <tt>agreed parameters</tt> set for a connection, a server <bcp14>MUST</bcp14> produce <em>magic-less frames</em>, otherwise the server <bcp14>MUST NOT</bcp14> produce <em>magic-less frames</em>.
+          </t>
+          <t>
+            If the <tt>client_no_zstd_magic</tt> option appears in the <tt>agreed parameters</tt> set for a connection, a client <bcp14>MUST</bcp14> produce <em>magic-less frames</em>, otherwise the client <bcp14>MUST NOT</bcp14> produce <em>magic-less frames</em>.
+          </t>
+          <t>
+            If a sender has negotiated the use of <em>magic-less frames</em>,
+            the first four bytes of a <em>Zstd Frame</em> are stripped. Without this identifier, it is no longer possible to distinguish <em>Zstd Frames</em> and <em>Zstd Skippable Frames</em>. For this reason, when producing <em>magic-less frames</em>, a sender <bcp14>MUST NOT</bcp14> emit <em>Zstd Skippable Frames</em>.
+          </t>
+        </section>
+      </section>
+      <section anchor="decoding">
+        <name>Decoding</name>
+        <t>
+          <cref>TODO</cref>
+        </t>
+        <t>
+          A decoder <bcp14>MUST</bcp14> accept compressed payloads comprised of multiple <em>Zstd Frames</em>.
+        </t>
+
+        <section anchor="decoding-window">
+          <name>Window</name>
+          <t>
+            The <em>Window Size</em>
+          </t>
+          <t>
+            If a peer is unwilling to receive content with an arbitrarily large <em>Window Size</em> (in particular, up to 8 MB), the peer <bcp14>SHOULD</bcp14> send an appropriate <tt>server_max_window_bits</tt> or <tt>client_max_window_bits</tt> parameter during connection negotiation.
+          </t>
+          <t>
+            The <em>Required Window</em> of a <em>Zstd Frame</em>, which describes how much memory must be allocated to be able to decompress the frame, is the <em>Window_Size</em> derived from the frame's <em>Window_Descriptor</em> (<relref section="3.1.1.1.2" target="RFC8478"/>) if the <em>Single_Segment_Flag</em> (<relref section="3.1.1.1.1.2" target="RFC8478"/>) is unset, or the <em>Frame_Content_Size</em> (<relref section="3.1.1.1.1.1" target="RFC8478"/>) if the <em>Single_Segment_Flag</em> is set.
+          </t>
+          <t>
+            If a peer receives a <em>Zstd Frame</em> whose <em>Required Window</em> is larger than the <em>Window Size</em> negotiated for the sender, the peer <bcp14>SHOULD</bcp14> <em>Fail the WebSocket Connection</em>.
+          </t>
+          <t>
+            Otherwise, if no <em>Window Size</em> was negotiated, and a peer receives a <em>Zstd Frame</em> whose <em>Required Window</em> is larger than they are willing to handle, the peer <bcp14>MAY</bcp14> <em>Fail the WebSocket Connection</em>.
+          </t>
+        </section>
+        <section anchor="decoding-magic">
+          <name>Magic-Less Frames</name>
+          <t>
+            If a receiver has negotiated the use of <em>magic-less frames</em>,
+            every frame is assumed to be a <em>Zstd Frame</em>
+          </t>
+        </section>
       </section>
     </section>
 
@@ -335,6 +386,8 @@ Zstd Blocks:        [..][..][..][..][..][..][..][..][]
       <name>Security Considerations</name>
       <t>
         <cref>TODO</cref>
+      </t>
+      <t>
         <xref target="CRIME"/>
         <xref target="DICT-SEC"/>
       </t>
@@ -419,6 +472,23 @@ Zstd Blocks:        [..][..][..][..][..][..][..][..][]
               </t>
             </abstract>
           </front>
+        </reference>
+
+        <reference anchor="RFC8174" target="https://www.rfc-editor.org/info/rfc8174">
+          <front>
+            <title>Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</title>
+            <author initials="B." surname="Leiba" fullname="Barry Leiba">
+            </author>
+            <date year="2017" month="May"/>
+            <abstract>
+              <t>
+                RFC 2119 specifies common key words that may be used in protocol specifications. This document aims to reduce the ambiguity by clarifying that only UPPERCASE usage of the key words have the defined special meanings.
+              </t>
+            </abstract>
+          </front>
+          <seriesInfo name="BCP" value="14"/>
+          <seriesInfo name="RFC" value="8174"/>
+          <seriesInfo name="DOI" value="10.17487/RFC8174"/>
         </reference>
 
         <reference anchor="RFC8478" target="https://www.rfc-editor.org/info/rfc8478">
