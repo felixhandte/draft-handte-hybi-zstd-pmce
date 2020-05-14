@@ -10,7 +10,7 @@
     xmlns:xi="http://www.w3.org/2001/XInclude"
     ipr="trust200902"
     category="info"
-    docName="draft-handte-hybi-zstd-pcme-latest"
+    docName="draft-handte-hybi-zstd-pmce-latest"
     obsoletes=""
     updates=""
     submissionType="IETF"
@@ -20,10 +20,10 @@
     sortRefs="true"
     version="3">
   <front>
-    <title abbrev="Zstd PCME">
+    <title abbrev="Zstd PMCE">
       A Zstandard Per-Message Compression Extension for WebSocket
     </title>
-    <seriesInfo name="Internet-Draft" value="draft-handte-hybi-zstd-pcme-latest"/>
+    <seriesInfo name="Internet-Draft" value="draft-handte-hybi-zstd-pmce-latest"/>
 
     <author initials="W. F. P." surname="Handte" fullname="W. Felix P. Handte">
       <organization>Facebook, Inc.</organization>
@@ -74,7 +74,7 @@
       <name>Draft Development</name>
       <!-- RFC Editor: Please remove this section before publication. -->
       <t>
-        The source code and issues list for this draft can be found at <eref target="https://github.com/felixhandte/draft-handte-hybi-zstd-pcme"/>.
+        The source code and issues list for this draft can be found at <eref target="https://github.com/felixhandte/draft-handte-hybi-zstd-pmce"/>.
       </t>
     </note>
   </front>
