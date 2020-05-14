@@ -2,9 +2,9 @@
 
 This is the working area for the individual Internet-Draft, "A Zstandard Per-Message Compression Extension for WebSocket".
 
-* [Editor's Copy](https://felixhandte.github.io/draft-handte-hybi-zstd-pcme/#go.draft-handte-hybi-zstd-pcme.html)
-* [Individual Draft](https://tools.ietf.org/html/draft-handte-hybi-zstd-pcme)
-* [Compare Editor's Copy to Individual Draft](https://felixhandte.github.io/draft-handte-hybi-zstd-pcme/#go.draft-handte-hybi-zstd-pcme.diff)
+* [Editor's Copy](https://felixhandte.github.io/draft-handte-hybi-zstd-pmce/#go.draft-handte-hybi-zstd-pmce.html)
+* [Individual Draft](https://tools.ietf.org/html/draft-handte-hybi-zstd-pmce)
+* [Compare Editor's Copy to Individual Draft](https://felixhandte.github.io/draft-handte-hybi-zstd-pmce/#go.draft-handte-hybi-zstd-pmce.diff)
 
 ## Building the Draft
 
@@ -21,4 +21,4 @@ This requires that you have the necessary software installed.  See
 ## Contributing
 
 See the
-[guidelines for contributions](https://github.com/felixhandte/draft-handte-hybi-zstd-pcme/blob/master/CONTRIBUTING.md).
+[guidelines for contributions](https://github.com/felixhandte/draft-handte-hybi-zstd-pmce/blob/master/CONTRIBUTING.md).
